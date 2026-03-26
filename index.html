@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#03045e" />
+  <title>II Copa Deporclub 2026</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<!-- ══ HEADER ══ -->
+<header class="header">
+  <div class="header-logo">🏊</div>
+  <h1>II Copa de Natación<br>Deporclub 2026</h1>
+  <p class="header-sub">25 – 29 de Marzo del 2026 &nbsp;·&nbsp; Primera Sesión</p>
+</header>
+
+<!-- ══ STATS ══ -->
+<div class="stats-bar">
+  <div class="stat-chip">
+    <div class="stat-value" id="statAtletas">—</div>
+    <div class="stat-label">Atletas</div>
+  </div>
+  <div class="stat-chip">
+    <div class="stat-value" id="statEquipos">—</div>
+    <div class="stat-label">Equipos</div>
+  </div>
+  <div class="stat-chip">
+    <div class="stat-value" id="statCategorias">—</div>
+    <div class="stat-label">Categorías</div>
+  </div>
+  <div class="stat-chip">
+    <div class="stat-value" id="statPruebas">1</div>
+    <div class="stat-label">Sesiones</div>
+  </div>
+</div>
+
+<!-- ══ TABS ══ -->
+<nav class="tabs">
+  <button class="tab-btn active" data-tab="podios">
+    <span class="tab-icon">🏆</span> Podios
+  </button>
+  <button class="tab-btn" data-tab="resultados">
+    <span class="tab-icon">📋</span> Resultados
+  </button>
+</nav>
+
+<!-- ══ TAB: PODIOS ══ -->
+<div id="podios" class="tab-content active">
+  <div class="pills-row" id="catPills"></div>
+  <div class="podios-grid" id="podiosGrid"></div>
+</div>
+
+<!-- ══ TAB: RESULTADOS ══ -->
+<div id="resultados" class="tab-content">
+
+  <!-- Search bar -->
+  <div class="search-bar">
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input
+        type="search"
+        id="filterBuscar"
+        class="search-input"
+        placeholder="Buscar atleta…"
+        autocomplete="off"
+        autocorrect="off"
+        spellcheck="false"
+      />
+    </div>
+    <button class="filter-toggle-btn" id="filterToggleBtn">
+      <span>⚙️</span> Filtrar
+    </button>
+  </div>
+
+  <!-- Filter panel (bottom sheet on mobile, inline on desktop) -->
+  <div class="filter-sheet" id="filterSheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">
+      Filtros
+      <button class="sheet-close" id="sheetClose">✕</button>
+    </div>
+
+    <div class="sheet-field">
+      <label>Género</label>
+      <select id="filterGenero">
+        <option value="">Todos</option>
+      </select>
+    </div>
+
+    <div class="sheet-field">
+      <label>Categoría de edad</label>
+      <select id="filterCategoria">
+        <option value="">Todas</option>
+      </select>
+    </div>
+
+    <div class="sheet-field">
+      <label>Equipo / Club</label>
+      <select id="filterEquipo">
+        <option value="">Todos</option>
+      </select>
+    </div>
+
+    <div class="sheet-actions">
+      <button class="btn-clear" id="btnClear">Limpiar</button>
+      <button class="btn-apply" id="btnApply">Aplicar</button>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div class="results-info">
+    <span id="tableInfo"></span>
+    <a class="clear-link" id="clearAllLink" style="display:none">Limpiar filtros</a>
+  </div>
+
+  <div class="results-list" id="resultsList"></div>
+  <div class="pagination" id="pagination"></div>
+</div>
+
+<footer>
+  <p>II Copa de Natación Deporclub 2026</p>
+  <p>EXH = Exhibition (no puntúa) &nbsp;·&nbsp; DQ = Descalificado</p>
+</footer>
+
+<!-- ══ BACKDROP ══ -->
+<div class="sheet-backdrop" id="sheetBackdrop"></div>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
