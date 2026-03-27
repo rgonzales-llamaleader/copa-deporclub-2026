@@ -85,6 +85,8 @@ body {
   gap: .5rem;
   padding: 1.6rem 1.25rem .75rem;
   margin: -2rem 0 1rem;
+  position: relative;
+  z-index: 10;
 }
 
 .stat-chip {
@@ -255,6 +257,29 @@ body {
   margin-top: .15rem;
 }
 
+.podio-records {
+  font-size: .68rem;
+  opacity: .85;
+  margin-top: .35rem;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .2rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.rec-badge {
+  font-size: .6rem;
+  font-weight: 900;
+  padding: .1rem .35rem;
+  border-radius: 4px;
+  letter-spacing: .03em;
+}
+.rec-badge.rm { background: rgba(255,255,255,.25); color: #fff; }
+.rec-badge.rn { background: rgba(255,255,255,.18); color: #e0f2fe; }
+
+.rec-name { opacity: .75; }
+
 .podio-places { padding: .6rem .75rem .75rem; }
 
 .podio-place {
@@ -270,6 +295,43 @@ body {
 .podio-place.p1 { background: linear-gradient(120deg, #fef9c3, #fde68a); }
 .podio-place.p2 { background: linear-gradient(120deg, #f8fafc, #f1f5f9); }
 .podio-place.p3 { background: linear-gradient(120deg, #fff7ed, #fed7aa); }
+
+/* Record breakers in podio */
+.podio-place.record-breaker {
+  position: relative;
+  overflow: hidden;
+}
+.podio-place.rm-breaker {
+  background: linear-gradient(120deg, #ecfdf5, #a7f3d0) !important;
+  box-shadow: 0 0 0 2px #10b981 inset;
+  animation: record-pulse 2.5s ease-in-out infinite;
+}
+.podio-place.rn-breaker {
+  background: linear-gradient(120deg, #eff6ff, #bfdbfe) !important;
+  box-shadow: 0 0 0 2px #3b82f6 inset;
+}
+
+@keyframes record-pulse {
+  0%, 100% { box-shadow: 0 0 0 2px #10b981 inset, 0 0 0 rgba(16,185,129,0); }
+  50%       { box-shadow: 0 0 0 2px #10b981 inset, 0 0 8px rgba(16,185,129,.35); }
+}
+
+.record-pill {
+  display: inline-flex;
+  align-items: center;
+  font-size: .58rem;
+  font-weight: 900;
+  padding: .1rem .35rem;
+  border-radius: 4px;
+  margin-left: .35rem;
+  vertical-align: middle;
+  letter-spacing: .02em;
+  white-space: nowrap;
+}
+.record-pill.rm { background: #d1fae5; color: #065f46; }
+.record-pill.rn { background: #dbeafe; color: #1e40af; }
+
+.place-time.record-time { color: #059669; }
 
 .medal-icon { font-size: 1.5rem; flex-shrink: 0; line-height: 1; }
 
@@ -424,6 +486,38 @@ body {
 .result-card.pos-2 { border-left-color: #94a3b8; }
 .result-card.pos-3 { border-left-color: #cd7c37; }
 .result-card.is-dq { opacity: .45; border-left-color: #f87171; }
+
+.result-card.pos-rm-breaker {
+  border-left-color: #10b981;
+  background: linear-gradient(100deg, #f0fdf4, #fff);
+  animation: record-pulse-card 2.5s ease-in-out infinite;
+}
+.result-card.pos-rn-breaker {
+  border-left-color: #3b82f6;
+  background: linear-gradient(100deg, #eff6ff, #fff);
+}
+
+@keyframes record-pulse-card {
+  0%, 100% { box-shadow: 1px 2px 6px rgba(16,185,129,.1); }
+  50%       { box-shadow: 1px 2px 14px rgba(16,185,129,.3); }
+}
+
+.rc-record-pill {
+  display: inline-flex;
+  align-items: center;
+  font-size: .58rem;
+  font-weight: 900;
+  padding: .1rem .35rem;
+  border-radius: 4px;
+  margin-top: .25rem;
+  letter-spacing: .02em;
+  white-space: nowrap;
+}
+.rc-record-pill.rm { background: #d1fae5; color: #065f46; }
+.rc-record-pill.rn { background: #dbeafe; color: #1e40af; }
+
+.rc-right { display: flex; flex-direction: column; align-items: flex-end; }
+.rc-time.record-time { color: #059669; }
 
 .rc-pos {
   width: 32px;

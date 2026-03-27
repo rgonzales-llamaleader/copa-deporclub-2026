@@ -1,5 +1,28 @@
 'use strict';
 
+// ── Records de referencia ──
+const SWIM_RECORDS = {
+  Damas:   { RM: '3:54.18', RM_nadador: 'Summer McIntosh',         RN: '4:17.21', RN_nadador: 'A. Cedron' },
+  Varones: { RM: '3:39.96', RM_nadador: 'Lukas Maertens',          RN: '3:52.18', RN_nadador: 'J. Vargas'  },
+};
+
+function timeToSec(str) {
+  if (!str || str === 'DQ' || str === '—') return Infinity;
+  const parts = str.split(':');
+  return parts.length === 2
+    ? parseInt(parts[0], 10) * 60 + parseFloat(parts[1])
+    : parseFloat(parts[0]);
+}
+
+function getRecordBadge(tiempo, genero) {
+  const rec = SWIM_RECORDS[genero];
+  if (!rec) return null;
+  const t = timeToSec(tiempo);
+  if (t <= timeToSec(rec.RM)) return 'RM';
+  if (t <= timeToSec(rec.RN)) return 'RN';
+  return null;
+}
+
 // ── State ──
 let allData  = [];
 let filtered = [];
@@ -166,24 +189,39 @@ function renderPodios(data, filterGenero = 'all') {
     if (top3.length === 0) return;
 
     const icon = cat.genero === 'Damas' ? '♀' : '♂';
+    const rec  = SWIM_RECORDS[cat.genero] || {};
     const card = document.createElement('div');
     card.className = 'podio-card';
     card.innerHTML = `
       <div class="podio-header">
         <div class="podio-header-title">${icon} ${cat.genero} &mdash; ${cat.categoria}</div>
         <div class="podio-header-sub">400 LC Metros Libre</div>
+        ${rec.RM ? `
+        <div class="podio-records">
+          <span class="rec-badge rm">R.M.</span> ${rec.RM} <span class="rec-name">${rec.RM_nadador}</span>
+          &nbsp;·&nbsp;
+          <span class="rec-badge rn">R.N.</span> ${rec.RN} <span class="rec-name">${rec.RN_nadador}</span>
+        </div>` : ''}
       </div>
       <div class="podio-places">
-        ${top3.map((r, i) => `
-          <div class="podio-place p${i + 1}">
+        ${top3.map((r, i) => {
+          const badge = getRecordBadge(r.tiempo, r.genero);
+          const badgeHtml = badge === 'RM'
+            ? '<span class="record-pill rm">🌍 R.M.</span>'
+            : badge === 'RN'
+            ? '<span class="record-pill rn">🏅 R.N.</span>'
+            : '';
+          const placeExtra = badge ? ` record-breaker ${badge.toLowerCase()}-breaker` : '';
+          return `
+          <div class="podio-place p${i + 1}${placeExtra}">
             <span class="medal-icon">${medals[i]}</span>
             <div class="place-body">
-              <div class="place-name">${r.nombre}</div>
+              <div class="place-name">${r.nombre}${badgeHtml}</div>
               <div class="place-meta"><span class="equipo-tag">${r.equipo}</span> &middot; ${r.edad} años</div>
             </div>
-            <span class="place-time">${r.tiempo}</span>
-          </div>
-        `).join('')}
+            <span class="place-time${badge ? ' record-time' : ''}">${r.tiempo}</span>
+          </div>`;
+        }).join('')}
       </div>
     `;
     card.addEventListener('click', () => goToResultados(cat.genero, cat.categoria));
@@ -245,11 +283,21 @@ function renderResults() {
     else if (r.pos === 2)   posClass = 'silver';
     else if (r.pos === 3)   posClass = 'bronze';
 
-    const cardClass = r.dq ? 'is-dq' : (r.pos <= 3 ? `pos-${r.pos}` : '');
+    const recordBadge = r.dq ? null : getRecordBadge(r.tiempo, r.genero);
+    const cardClass = r.dq
+      ? 'is-dq'
+      : recordBadge === 'RM' ? 'pos-rm-breaker'
+      : recordBadge === 'RN' ? 'pos-rn-breaker'
+      : (r.pos <= 3 ? `pos-${r.pos}` : '');
     const exhBadge  = r.exhibition ? '<span class="badge-exh">EXH</span>' : '';
+    const recBadgeHtml = recordBadge === 'RM'
+      ? '<span class="rc-record-pill rm">🌍 R.M.</span>'
+      : recordBadge === 'RN'
+      ? '<span class="rc-record-pill rn">🏅 R.N.</span>'
+      : '';
     const timeHtml  = r.dq
       ? '<span class="rc-dq-label">DQ</span>'
-      : `<span class="rc-time">${r.tiempo}</span>`;
+      : `<span class="rc-time${recordBadge ? ' record-time' : ''}">${r.tiempo}</span>${recBadgeHtml}`;
 
     card.className = `result-card ${cardClass}`;
     card.innerHTML = `
