@@ -1035,6 +1035,12 @@ footer {
   line-height: 1.7;
 }
 
+footer a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
 /* ═══════════════════════════════════════
    DESKTOP (≥ 768px)
 ═══════════════════════════════════════ */
