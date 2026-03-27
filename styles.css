@@ -82,23 +82,19 @@ body {
 ═══════════════════════════════════════ */
 .stats-bar {
   display: flex;
-  gap: .75rem;
-  padding: 0 1.25rem;
-  margin: -1.5rem 0 1.5rem;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
+  gap: .5rem;
+  padding: 1.6rem 1.25rem .75rem;
+  margin: -2rem 0 1rem;
 }
-.stats-bar::-webkit-scrollbar { display: none; }
 
 .stat-chip {
   background: var(--surface);
   border-radius: 14px;
   box-shadow: 0 4px 16px rgba(0,119,182,.14);
-  padding: .9rem 1.1rem;
+  padding: .75rem .5rem;
   text-align: center;
-  flex-shrink: 0;
-  min-width: 88px;
+  flex: 1 1 0;
+  min-width: 0;
 }
 
 .stat-value {
@@ -228,6 +224,18 @@ body {
   border-radius: var(--radius);
   overflow: hidden;
   box-shadow: 0 2px 12px rgba(0,0,0,.08);
+  cursor: pointer;
+  transition: box-shadow .2s, transform .15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.podio-card:hover {
+  box-shadow: 0 6px 20px rgba(0,119,182,.18);
+  transform: translateY(-2px);
+}
+
+.podio-card:active {
+  transform: translateY(0);
 }
 
 .podio-header {
@@ -693,11 +701,10 @@ footer {
 
   .stats-bar {
     justify-content: center;
-    overflow: visible;
-    padding: 0 2rem;
-    margin-bottom: 2rem;
+    padding: 1.6rem 2rem .75rem;
+    margin-bottom: 1.5rem;
   }
-  .stat-chip { min-width: 110px; }
+  .stat-chip { flex: 0 0 auto; min-width: 110px; }
 
   .tab-content { padding: 1.5rem 2rem; }
 

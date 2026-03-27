@@ -186,8 +186,34 @@ function renderPodios(data, filterGenero = 'all') {
         `).join('')}
       </div>
     `;
+    card.addEventListener('click', () => goToResultados(cat.genero, cat.categoria));
     grid.appendChild(card);
   });
+}
+
+// ── Navigate to Resultados with filters ──
+function goToResultados(genero, categoria) {
+  // Switch to resultados tab
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.querySelector('[data-tab="resultados"]').classList.add('active');
+  document.getElementById('resultados').classList.add('active');
+
+  // Apply filters
+  activeGenero    = genero;
+  activeCategoria = categoria;
+  activeEquipo    = '';
+  activeBuscar    = '';
+
+  // Sync UI
+  document.getElementById('filterGenero').value    = genero;
+  document.getElementById('filterCategoria').value = categoria;
+  document.getElementById('filterEquipo').value    = '';
+  document.getElementById('filterBuscar').value    = '';
+
+  applyFilters();
+  updateFilterBtn();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 // ── Results cards ──
