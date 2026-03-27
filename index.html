@@ -8,15 +8,12 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-
-<!-- ══ HEADER ══ -->
 <header class="header">
   <div class="header-logo">🏊</div>
   <h1>II Copa de Natación<br>Deporclub 2026</h1>
-  <p class="header-sub">25 – 29 de Marzo del 2026 &nbsp;·&nbsp; Primera Sesión</p>
+  <p class="header-sub" id="headerSub">25 - 29 de Marzo del 2026 · Resultados acumulados</p>
 </header>
 
-<!-- ══ STATS ══ -->
 <div class="stats-bar">
   <div class="stat-chip">
     <div class="stat-value" id="statAtletas">—</div>
@@ -31,12 +28,11 @@
     <div class="stat-label">Categorías</div>
   </div>
   <div class="stat-chip">
-    <div class="stat-value" id="statPruebas">1</div>
-    <div class="stat-label">Sesiones</div>
+    <div class="stat-value" id="statPruebas">—</div>
+    <div class="stat-label">Eventos</div>
   </div>
 </div>
 
-<!-- ══ TABS ══ -->
 <nav class="tabs">
   <button class="tab-btn active" data-tab="podios">
     <span class="tab-icon">🏆</span> Podios
@@ -49,16 +45,12 @@
   </button>
 </nav>
 
-<!-- ══ TAB: PODIOS ══ -->
 <div id="podios" class="tab-content active">
   <div class="pills-row" id="catPills"></div>
   <div class="podios-grid" id="podiosGrid"></div>
 </div>
 
-<!-- ══ TAB: RESULTADOS ══ -->
 <div id="resultados" class="tab-content">
-
-  <!-- Search bar -->
   <div class="search-bar">
     <div class="search-wrap">
       <span class="search-icon">🔍</span>
@@ -66,7 +58,7 @@
         type="search"
         id="filterBuscar"
         class="search-input"
-        placeholder="Buscar atleta…"
+        placeholder="Buscar atleta..."
         autocomplete="off"
         autocorrect="off"
         spellcheck="false"
@@ -77,7 +69,6 @@
     </button>
   </div>
 
-  <!-- Filter panel (bottom sheet on mobile, inline on desktop) -->
   <div class="filter-sheet" id="filterSheet">
     <div class="sheet-handle"></div>
     <div class="sheet-title">
@@ -86,9 +77,23 @@
     </div>
 
     <div class="sheet-field">
+      <label>Sesión</label>
+      <select id="filterSesion">
+        <option value="">Todas</option>
+      </select>
+    </div>
+
+    <div class="sheet-field">
       <label>Género</label>
       <select id="filterGenero">
         <option value="">Todos</option>
+      </select>
+    </div>
+
+    <div class="sheet-field">
+      <label>Prueba</label>
+      <select id="filterPrueba">
+        <option value="">Todas</option>
       </select>
     </div>
 
@@ -112,7 +117,6 @@
     </div>
   </div>
 
-  <!-- Results -->
   <div class="results-info">
     <span id="tableInfo"></span>
     <a class="clear-link" id="clearAllLink" style="display:none">Limpiar filtros</a>
@@ -122,20 +126,36 @@
   <div class="pagination" id="pagination"></div>
 </div>
 
-<!-- ══ TAB: RANKING ══ -->
 <div id="ranking" class="tab-content">
   <div class="ranking-header">
-    <p class="ranking-subtitle">Puntaje acumulado por club · Posiciones 1–8 sin Exhibition</p>
+    <p class="ranking-subtitle">Puntaje acumulado oficial hasta el Evento 12</p>
   </div>
-  <div id="rankingList"></div>
+  <div class="ranking-switch" id="rankingSwitch">
+    <button class="ranking-switch-btn active" data-ranking-target="combined">Puntaje total</button>
+    <button class="ranking-switch-btn" data-ranking-target="women">Mujeres</button>
+    <button class="ranking-switch-btn" data-ranking-target="men">Hombres</button>
+  </div>
+  <div class="ranking-sections">
+    <section class="ranking-block active" data-ranking-panel="combined">
+      <h3>Acumulado general</h3>
+      <div id="rankingListCombined"></div>
+    </section>
+    <section class="ranking-block" data-ranking-panel="women">
+      <h3>Acumulado mujeres</h3>
+      <div id="rankingListWomen"></div>
+    </section>
+    <section class="ranking-block" data-ranking-panel="men">
+      <h3>Acumulado hombres</h3>
+      <div id="rankingListMen"></div>
+    </section>
+  </div>
 </div>
 
 <footer>
   <p>II Copa de Natación Deporclub 2026</p>
-  <p>EXH = Exhibition (no puntúa) &nbsp;·&nbsp; DQ = Descalificado</p>
+  <p>EXH = Exhibition (no puntúa) · DQ = Disqualified · NS = No Show</p>
 </footer>
 
-<!-- ══ BACKDROP ══ -->
 <div class="sheet-backdrop" id="sheetBackdrop"></div>
 
 <script src="data.js"></script>
