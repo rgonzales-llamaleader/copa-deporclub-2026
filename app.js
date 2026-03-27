@@ -229,6 +229,102 @@ function renderPodios(data, filterGenero = 'all') {
   });
 }
 
+// ── Ranking por equipo ──
+const SCORE_POINTS = [9, 7, 6, 5, 4, 3, 2, 1];
+
+function computeRanking(data) {
+  const teamScores  = {}; // { equipo: totalPoints }
+  const teamDetails = {}; // { equipo: [{ evento, puntos }] }
+
+  // Agrupar por evento (genero + categoria)
+  const events = new Map();
+  data.forEach(r => {
+    const key = `${r.genero}|${r.categoria}`;
+    if (!events.has(key)) events.set(key, []);
+    events.get(key).push(r);
+  });
+
+  events.forEach(participants => {
+    // Ordenar por posición, excluir DQ
+    const ranked = participants
+      .filter(r => !r.dq)
+      .sort((a, b) => (a.pos ?? 999) - (b.pos ?? 999));
+
+    let scoreIdx = 0;
+    for (const r of ranked) {
+      if (scoreIdx >= SCORE_POINTS.length) break;
+      if (r.exhibition) continue; // saltar sin consumir posición de puntaje
+
+      const pts = SCORE_POINTS[scoreIdx];
+      teamScores[r.equipo]  = (teamScores[r.equipo]  || 0) + pts;
+      if (!teamDetails[r.equipo]) teamDetails[r.equipo] = [];
+      teamDetails[r.equipo].push({ nombre: r.nombre, genero: r.genero, categoria: r.categoria, prueba: r.prueba, pos: r.pos, puntos: pts });
+      scoreIdx++;
+    }
+  });
+
+  return Object.entries(teamScores)
+    .map(([equipo, puntos]) => ({ equipo, puntos, detalles: teamDetails[equipo] || [] }))
+    .sort((a, b) => b.puntos - a.puntos || a.equipo.localeCompare(b.equipo));
+}
+
+function renderRanking(data) {
+  const list    = document.getElementById('rankingList');
+  const ranking = computeRanking(data);
+  list.innerHTML = '';
+
+  const podiumIcons = ['🥇', '🥈', '🥉'];
+  const posLabel    = [,'🥇','🥈','🥉'];
+
+  ranking.forEach((team, i) => {
+    const rank      = i + 1;
+    const icon      = podiumIcons[i] || '';
+    const rankClass = rank === 1 ? 'rk-gold' : rank === 2 ? 'rk-silver' : rank === 3 ? 'rk-bronze' : '';
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'rk-wrapper';
+
+    // Fila principal
+    const row = document.createElement('div');
+    row.className = `ranking-row ${rankClass}`;
+    row.innerHTML = `
+      <div class="rk-pos">${icon || rank}</div>
+      <div class="rk-body">
+        <div class="rk-name">${team.equipo}</div>
+        <div class="rk-events">${team.detalles.length} concursante${team.detalles.length !== 1 ? 's' : ''} puntuado${team.detalles.length !== 1 ? 's' : ''}</div>
+      </div>
+      <div class="rk-points">
+        <span class="rk-pts">${team.puntos}</span>
+        <span class="rk-pts-label">pts</span>
+      </div>
+      <span class="rk-chevron">▾</span>
+    `;
+
+    // Panel de detalle
+    const detail = document.createElement('div');
+    detail.className = 'rk-detail';
+    detail.innerHTML = team.detalles.map(d => `
+      <div class="rk-detail-row">
+        <span class="rk-detail-pos">${posLabel[d.pos] || `#${d.pos}`}</span>
+        <div class="rk-detail-body">
+          <div class="rk-detail-name">${d.nombre}</div>
+          <div class="rk-detail-cat">${d.prueba} · ${d.genero} · ${d.categoria}</div>
+        </div>
+        <span class="rk-detail-pts">+${d.puntos} pts</span>
+      </div>
+    `).join('');
+
+    row.addEventListener('click', () => {
+      const open = detail.classList.toggle('open');
+      row.classList.toggle('expanded', open);
+    });
+
+    wrapper.appendChild(row);
+    wrapper.appendChild(detail);
+    list.appendChild(wrapper);
+  });
+}
+
 // ── Navigate to Resultados with filters ──
 function goToResultados(genero, categoria) {
   // Switch to resultados tab
@@ -370,6 +466,7 @@ function init() {
   renderPodios(allData);
   renderResults();
   updateResultsInfo();
+  renderRanking(allData);
 
   // Search (live)
   document.getElementById('filterBuscar').addEventListener('input', e => {
