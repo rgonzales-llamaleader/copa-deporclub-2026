@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
@@ -37,11 +37,14 @@
   <button class="tab-btn active" data-tab="podios">
     <span class="tab-icon">🏆</span> Podios
   </button>
-  <button class="tab-btn" data-tab="resultados">
-    <span class="tab-icon">📋</span> Resultados
-  </button>
   <button class="tab-btn" data-tab="ranking">
     <span class="tab-icon">🎖️</span> Ranking
+  </button>
+  <button class="tab-btn" data-tab="medallero">
+    <span class="tab-icon">🥇</span> Medallero
+  </button>
+  <button class="tab-btn" data-tab="resultados">
+    <span class="tab-icon">📋</span> Resultados
   </button>
 </nav>
 
@@ -57,6 +60,55 @@
     </div>
   </div>
   <div class="podios-grid" id="podiosGrid"></div>
+</div>
+
+<div id="ranking" class="tab-content">
+  <div class="ranking-header">
+    <p class="ranking-subtitle">Puntaje acumulado oficial hasta el Evento 12</p>
+  </div>
+  <div class="ranking-switch" id="rankingSwitch">
+    <button class="ranking-switch-btn active" data-ranking-target="combined">Puntaje total</button>
+    <button class="ranking-switch-btn" data-ranking-target="women">Mujeres</button>
+    <button class="ranking-switch-btn" data-ranking-target="men">Hombres</button>
+  </div>
+  <div class="ranking-sections">
+    <section class="ranking-block active" data-ranking-panel="combined">
+      <h3>Acumulado general</h3>
+      <div id="rankingListCombined"></div>
+    </section>
+    <section class="ranking-block" data-ranking-panel="women">
+      <h3>Acumulado mujeres</h3>
+      <div id="rankingListWomen"></div>
+    </section>
+    <section class="ranking-block" data-ranking-panel="men">
+      <h3>Acumulado hombres</h3>
+      <div id="rankingListMen"></div>
+    </section>
+  </div>
+</div>
+
+<div id="medallero" class="tab-content">
+  <div class="ranking-header">
+    <p class="ranking-subtitle">Medallas acumuladas por atleta en todos los eventos disputados</p>
+  </div>
+  <div class="search-bar medallero-search">
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input
+        type="search"
+        id="medalBuscar"
+        class="search-input"
+        placeholder="Buscar concursante por nombre..."
+        autocomplete="off"
+        autocorrect="off"
+        spellcheck="false"
+      />
+    </div>
+  </div>
+  <div class="results-info medallero-info">
+    <span id="medalleroInfo"></span>
+  </div>
+  <div class="medallero-list" id="medalleroList"></div>
 </div>
 
 <div id="resultados" class="tab-content">
@@ -133,31 +185,6 @@
 
   <div class="results-list" id="resultsList"></div>
   <div class="pagination" id="pagination"></div>
-</div>
-
-<div id="ranking" class="tab-content">
-  <div class="ranking-header">
-    <p class="ranking-subtitle">Puntaje acumulado oficial hasta el Evento 12</p>
-  </div>
-  <div class="ranking-switch" id="rankingSwitch">
-    <button class="ranking-switch-btn active" data-ranking-target="combined">Puntaje total</button>
-    <button class="ranking-switch-btn" data-ranking-target="women">Mujeres</button>
-    <button class="ranking-switch-btn" data-ranking-target="men">Hombres</button>
-  </div>
-  <div class="ranking-sections">
-    <section class="ranking-block active" data-ranking-panel="combined">
-      <h3>Acumulado general</h3>
-      <div id="rankingListCombined"></div>
-    </section>
-    <section class="ranking-block" data-ranking-panel="women">
-      <h3>Acumulado mujeres</h3>
-      <div id="rankingListWomen"></div>
-    </section>
-    <section class="ranking-block" data-ranking-panel="men">
-      <h3>Acumulado hombres</h3>
-      <div id="rankingListMen"></div>
-    </section>
-  </div>
 </div>
 
 <footer>

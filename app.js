@@ -26,6 +26,7 @@ let activeEquipo = '';
 let activeBuscar = '';
 let activePodioSesion = 'all';
 let activePodioGenero = 'all';
+let activeMedalBuscar = '';
 
 const isDesktop = () => window.innerWidth >= 768;
 
@@ -403,6 +404,80 @@ function renderOfficialRanking(targetId, rows) {
   });
 }
 
+function buildMedallero(rows) {
+  const medalists = new Map();
+
+  rows.forEach((row) => {
+    if (row.dq || row.ns || row.exhibition || ![1, 2, 3].includes(row.pos)) return;
+
+    const key = `${row.nombre}|${row.equipo}`;
+    if (!medalists.has(key)) {
+      medalists.set(key, {
+        nombre: row.nombre,
+        equipo: row.equipo,
+        teamName: row.teamName || row.equipo,
+        genero: row.genero,
+        gold: 0,
+        silver: 0,
+        bronze: 0,
+        total: 0
+      });
+    }
+
+    const athlete = medalists.get(key);
+    if (row.pos === 1) athlete.gold += 1;
+    if (row.pos === 2) athlete.silver += 1;
+    if (row.pos === 3) athlete.bronze += 1;
+    athlete.total += 1;
+  });
+
+  return [...medalists.values()].sort((a, b) => (
+    b.gold - a.gold
+    || b.silver - a.silver
+    || b.bronze - a.bronze
+    || b.total - a.total
+    || a.nombre.localeCompare(b.nombre, 'es')
+  ));
+}
+
+function renderMedallero(rows) {
+  const list = document.getElementById('medalleroList');
+  const info = document.getElementById('medalleroInfo');
+  const medallero = buildMedallero(rows).filter((athlete) => (
+    !activeMedalBuscar
+    || athlete.nombre.toLowerCase().includes(activeMedalBuscar)
+  ));
+
+  info.textContent = `${medallero.length} concursante${medallero.length !== 1 ? 's' : ''} con medallas`;
+  list.innerHTML = '';
+
+  if (!medallero.length) {
+    list.innerHTML = `
+      <div class="no-results">
+        <div class="no-results-icon">🔍</div>
+        <p>No hay concursantes que coincidan con la búsqueda</p>
+      </div>`;
+    return;
+  }
+
+  medallero.forEach((athlete) => {
+    const card = document.createElement('div');
+    card.className = 'ranking-row medallero-row';
+    card.innerHTML = `
+      <div class="rk-body">
+        <div class="rk-name">${athlete.nombre}</div>
+        <div class="rk-events"><span class="equipo-tag">${athlete.equipo}</span> · ${athlete.genero}</div>
+      </div>
+      <div class="medal-summary">
+        <span class="medal-pill gold">🥇 ${athlete.gold}</span>
+        <span class="medal-pill silver">🥈 ${athlete.silver}</span>
+        <span class="medal-pill bronze">🥉 ${athlete.bronze}</span>
+      </div>
+    `;
+    list.appendChild(card);
+  });
+}
+
 function initRankingSwitch() {
   const buttons = document.querySelectorAll('.ranking-switch-btn');
   const panels = document.querySelectorAll('.ranking-block');
@@ -431,6 +506,7 @@ function init() {
   renderOfficialRanking('rankingListCombined', RECORDS.rankingsOficiales.combined);
   renderOfficialRanking('rankingListWomen', RECORDS.rankingsOficiales.women);
   renderOfficialRanking('rankingListMen', RECORDS.rankingsOficiales.men);
+  renderMedallero(allData);
   initRankingSwitch();
 
   document.getElementById('filterBuscar').addEventListener('input', (event) => {
@@ -440,6 +516,11 @@ function init() {
 
   document.getElementById('filterToggleBtn').addEventListener('click', () => {
     if (!isDesktop()) openSheet();
+  });
+
+  document.getElementById('medalBuscar').addEventListener('input', (event) => {
+    activeMedalBuscar = event.target.value.trim().toLowerCase();
+    renderMedallero(allData);
   });
 
   document.getElementById('sheetClose').addEventListener('click', closeSheet);
