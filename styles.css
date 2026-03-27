@@ -153,10 +153,16 @@ body {
   position: sticky;
   top: 0;
   z-index: 100;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
 }
 
+.tabs::-webkit-scrollbar { display: none; }
+
 .tab-btn {
-  flex: 1;
+  flex: 1 0 auto;
   border: none;
   background: transparent;
   padding: 1rem .5rem;
@@ -171,6 +177,8 @@ body {
   position: relative;
   transition: color .2s;
   -webkit-tap-highlight-color: transparent;
+  white-space: nowrap;
+  min-width: max-content;
 }
 
 .tab-btn::after {
@@ -1319,6 +1327,8 @@ footer a {
   .stat-chip { flex: 0 0 auto; min-width: 110px; }
 
   .tab-content { padding: 1.5rem 2rem; }
+  .tabs { overflow-x: visible; }
+  .tab-btn { flex: 1; min-width: 0; }
 
   .podios-grid {
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
