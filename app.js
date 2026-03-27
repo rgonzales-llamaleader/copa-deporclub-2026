@@ -27,8 +27,19 @@ let activeBuscar = '';
 let activePodioSesion = 'all';
 let activePodioGenero = 'all';
 let activeMedalBuscar = '';
+let promoPopupTimer = null;
+
+const PROMO_POPUP_DELAY_MS = 30 * 1000;
+const PROMO_POPUP_COOLDOWN_MS = 2 * 60 * 60 * 1000;
+const PROMO_POPUP_STORAGE_KEY = 'deporclubPromoPopupLastShownAt';
 
 const isDesktop = () => window.innerWidth >= 768;
+
+function syncBodyScrollLock() {
+  const hasOpenOverlay = document.getElementById('filterSheet')?.classList.contains('open')
+    || document.getElementById('promoPopup')?.classList.contains('open');
+  document.body.style.overflow = hasOpenOverlay ? 'hidden' : '';
+}
 
 function timeToSec(str) {
   if (!str || str === 'DQ' || str === 'NS' || str === '—') return Infinity;
@@ -92,13 +103,70 @@ function initTabs() {
 function openSheet() {
   document.getElementById('filterSheet').classList.add('open');
   document.getElementById('sheetBackdrop').classList.add('open');
-  document.body.style.overflow = 'hidden';
+  syncBodyScrollLock();
 }
 
 function closeSheet() {
   document.getElementById('filterSheet').classList.remove('open');
   document.getElementById('sheetBackdrop').classList.remove('open');
-  document.body.style.overflow = '';
+  syncBodyScrollLock();
+}
+
+function getPromoPopupLastShownAt() {
+  try {
+    return Number(window.localStorage.getItem(PROMO_POPUP_STORAGE_KEY) || 0);
+  } catch {
+    return 0;
+  }
+}
+
+function setPromoPopupLastShownAt(timestamp) {
+  try {
+    window.localStorage.setItem(PROMO_POPUP_STORAGE_KEY, String(timestamp));
+  } catch {
+    // Si el navegador bloquea storage, el popup simplemente se comporta como temporal.
+  }
+}
+
+function shouldShowPromoPopup() {
+  return Date.now() - getPromoPopupLastShownAt() >= PROMO_POPUP_COOLDOWN_MS;
+}
+
+function openPromoPopup() {
+  const popup = document.getElementById('promoPopup');
+  const backdrop = document.getElementById('promoPopupBackdrop');
+
+  if (!popup || !backdrop || popup.classList.contains('open')) return;
+
+  popup.classList.add('open');
+  backdrop.classList.add('open');
+  setPromoPopupLastShownAt(Date.now());
+  syncBodyScrollLock();
+}
+
+function closePromoPopup() {
+  const popup = document.getElementById('promoPopup');
+  const backdrop = document.getElementById('promoPopupBackdrop');
+
+  if (!popup || !backdrop) return;
+
+  popup.classList.remove('open');
+  backdrop.classList.remove('open');
+  syncBodyScrollLock();
+}
+
+function schedulePromoPopup() {
+  if (!shouldShowPromoPopup()) return;
+
+  window.clearTimeout(promoPopupTimer);
+  promoPopupTimer = window.setTimeout(() => {
+    if (document.hidden) {
+      promoPopupTimer = null;
+      return;
+    }
+    openPromoPopup();
+    promoPopupTimer = null;
+  }, PROMO_POPUP_DELAY_MS);
 }
 
 function syncActiveFiltersFromUI() {
@@ -508,6 +576,7 @@ function init() {
   renderOfficialRanking('rankingListMen', RECORDS.rankingsOficiales.men);
   renderMedallero(allData);
   initRankingSwitch();
+  schedulePromoPopup();
 
   document.getElementById('filterBuscar').addEventListener('input', (event) => {
     activeBuscar = event.target.value.trim().toLowerCase();
@@ -527,6 +596,12 @@ function init() {
   document.getElementById('sheetBackdrop').addEventListener('click', closeSheet);
   document.getElementById('btnApply').addEventListener('click', applySheetFilters);
   document.getElementById('btnClear').addEventListener('click', clearSheetFilters);
+  document.getElementById('promoPopupClose').addEventListener('click', closePromoPopup);
+  document.getElementById('promoPopupDismiss').addEventListener('click', closePromoPopup);
+  document.getElementById('promoPopupBackdrop').addEventListener('click', closePromoPopup);
+  document.getElementById('promoPopupLink').addEventListener('click', () => {
+    closePromoPopup();
+  });
 
   ['filterSesion', 'filterGenero', 'filterPrueba', 'filterCategoria', 'filterEquipo'].forEach((id) => {
     document.getElementById(id).addEventListener('change', () => {
@@ -538,6 +613,16 @@ function init() {
     document.getElementById('filterBuscar').value = '';
     activeBuscar = '';
     clearSheetFilters();
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') closePromoPopup();
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && shouldShowPromoPopup() && promoPopupTimer === null) {
+      schedulePromoPopup();
+    }
   });
 }
 
