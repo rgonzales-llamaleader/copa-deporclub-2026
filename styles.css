@@ -662,6 +662,68 @@ body {
   border-radius: 5px;
 }
 
+.equipo-tag-btn {
+  border: none;
+  cursor: pointer;
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+
+.equipo-tag-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(3, 4, 94, .12);
+}
+
+.equipo-tag-btn:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+
+.rc-relay-members {
+  display: none;
+  margin-top: .7rem;
+  padding: .7rem .8rem;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #f8fbff 0%, #eef6ff 100%);
+  border: 1px solid rgba(59, 130, 246, .12);
+}
+
+.rc-relay-members.open {
+  display: block;
+}
+
+.rc-relay-title {
+  font-size: .72rem;
+  font-weight: 800;
+  color: var(--navy);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  margin-bottom: .45rem;
+}
+
+.rc-relay-list {
+  display: grid;
+  gap: .42rem;
+}
+
+.rc-relay-member {
+  display: flex;
+  justify-content: space-between;
+  gap: .75rem;
+  align-items: baseline;
+}
+
+.rc-relay-member-name {
+  font-size: .8rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.rc-relay-member-meta {
+  font-size: .72rem;
+  color: var(--muted);
+  text-align: right;
+}
+
 /* ═══════════════════════════════════════
    NO RESULTS
 ═══════════════════════════════════════ */

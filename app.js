@@ -35,6 +35,7 @@ let activeBuscar = '';
 let activePodioSesion = 'all';
 let activePodioGenero = 'all';
 let activeMedalBuscar = '';
+let expandedRelayResults = new Set();
 let promoPopupTimer = null;
 
 const PROMO_POPUP_DELAY_MS = 30 * 1000;
@@ -44,7 +45,8 @@ const SESSION_PILL_LABELS = {
   'Primera Sesion': '25 marzo',
   'Segunda Sesion': '26 marzo',
   'Tercera Fecha': '27 marzo',
-  'Tercera Sesion': '27 marzo'
+  'Tercera Sesion': '27 marzo',
+  'Cuarta Sesion': '28 marzo'
 };
 
 const isDesktop = () => window.innerWidth >= 768;
@@ -56,7 +58,7 @@ function syncBodyScrollLock() {
 }
 
 function timeToSec(str) {
-  if (!str || str === 'DQ' || str === 'NS' || str === '—') return Infinity;
+  if (!str || str === 'DQ' || str === 'NS' || str === 'NT' || str === '—') return Infinity;
   const parts = str.split(':');
   return parts.length === 2 ? Number(parts[0]) * 60 + Number(parts[1]) : Number(parts[0]);
 }
@@ -85,6 +87,10 @@ function getPodioMeta(row) {
 function getResultSecondaryMeta(row) {
   if (!row.relay || !Array.isArray(row.integrantes) || !row.integrantes.length) return `${row.genero} Â· ${row.sesionNombre}`;
   return `Relevo ${row.relayLabel} Â· ${row.integrantes.map((item) => item.nombre).join(' / ')}`;
+}
+
+function getRelayResultKey(row) {
+  return `${row.id}|${row.evento}|${row.equipo}|${row.relayLabel || ''}`;
 }
 
 function populateSelect(id, values, allLabel) {
@@ -140,9 +146,10 @@ function renderDatasetCopy(data) {
   const rankingSubtitle = document.getElementById('rankingSubtitle');
   const medalleroSubtitle = document.getElementById('medalleroSubtitle');
   const corte = RECORDS.validacion?.provisional ? 'Corte preliminar' : 'Acumulado oficial';
+  const officialUntilEvent = RECORDS.validacion?.officialUntilEvent || RECORDS.meta.eventos;
 
   if (rankingSubtitle) {
-    rankingSubtitle.textContent = `${corte} hasta el Evento ${RECORDS.meta.eventos} · ${data.length} resultados procesados`;
+    rankingSubtitle.textContent = `${corte} hasta el Evento ${officialUntilEvent} · ${data.length} resultados procesados`;
   }
 
   if (medalleroSubtitle) {
@@ -303,8 +310,9 @@ function initCategoryPills(data) {
 
   const genderPills = [
     { label: 'Todas', value: 'all' },
-    { label: 'Varones', value: 'Varones' },
-    { label: 'Damas', value: 'Damas' }
+    ...[...new Set(data.map((row) => row.genero))]
+      .sort((a, b) => a.localeCompare(b, 'es'))
+      .map((gender) => ({ label: gender, value: gender }))
   ];
 
   datePills.forEach((pill, index) => {
@@ -353,7 +361,7 @@ function renderPodios(data, sessionFilter = 'all', genderFilter = 'all') {
       const first = rows[0];
       const recordRefs = getRecordRefs(first);
       const top3 = rows
-        .filter((row) => !row.dq && !row.ns && !row.exhibition)
+        .filter((row) => !row.dq && !row.ns && !row.nt && !row.exhibition)
         .sort((a, b) => (a.pos || 999) - (b.pos || 999))
         .slice(0, 3);
 
@@ -386,7 +394,7 @@ function renderPodios(data, sessionFilter = 'all', genderFilter = 'all') {
                 <span class="medal-icon">${['🥇', '🥈', '🥉'][index]}</span>
                 <div class="place-body">
                   <div class="place-name">${row.nombre}${badge ? ` <span class="record-pill ${badge.toLowerCase()}">${badgeLabel}</span>` : ''}</div>
-                  <div class="place-meta"><span class="equipo-tag">${row.equipo}</span> · ${row.edad} años · ${row.puntos} pts</div>
+                  <div class="place-meta"><span class="equipo-tag">${row.equipo}</span> · ${getPodioMeta(row)}</div>
                 </div>
                 <span class="place-time${badge ? ' record-time' : ''}">${row.displayTime}</span>
               </div>
@@ -422,6 +430,7 @@ function goToResultados(row) {
 function statusTag(row) {
   if (row.ns) return '<span class="badge-ns">NS</span>';
   if (row.dq) return '<span class="badge-dq">DQ</span>';
+  if (row.nt) return '<span class="badge-ns">NT</span>';
   if (row.exhibition) return '<span class="badge-exh">EXH</span>';
   return '';
 }
@@ -451,6 +460,9 @@ function renderResults() {
     if (row.ns) {
       posClass = 'dq-pos';
       posLabel = 'NS';
+    } else if (row.nt) {
+      posClass = 'dq-pos';
+      posLabel = 'NT';
     } else if (row.dq) {
       posClass = 'dq-pos';
       posLabel = 'DQ';
@@ -459,15 +471,35 @@ function renderResults() {
     else if (row.pos === 3) posClass = 'bronze';
 
     const recordBadge = getRecordBadge(row);
+    const isRelayExpanded = row.relay && expandedRelayResults.has(getRelayResultKey(row));
+    const relayToggle = row.relay
+      ? `<button class="equipo-tag equipo-tag-btn" type="button" data-relay-toggle="${getRelayResultKey(row)}">${row.equipo}</button>`
+      : `<span class="equipo-tag">${row.equipo}</span>`;
+    const relayMembers = row.relay && Array.isArray(row.integrantes) && row.integrantes.length
+      ? `
+        <div class="rc-relay-members${isRelayExpanded ? ' open' : ''}">
+          <div class="rc-relay-title">Integrantes del equipo</div>
+          <div class="rc-relay-list">
+            ${row.integrantes.map((item) => `
+              <div class="rc-relay-member">
+                <span class="rc-relay-member-name">${item.nombre}</span>
+                <span class="rc-relay-member-meta">${item.genero || row.genero} · ${item.edad} años</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `
+      : '';
     card.className = `result-card ${row.dq ? 'is-dq' : row.ns ? 'is-ns' : ''}`;
     card.innerHTML = `
       <div class="rc-pos ${posClass}">${posLabel}</div>
       <div class="rc-body">
         <div class="rc-name">${row.nombre}${statusTag(row)}</div>
         <div class="rc-meta">
-          <span class="equipo-tag">${row.equipo}</span> · Evento ${row.evento} · ${row.prueba} · ${row.categoria}
+          ${relayToggle} · Evento ${row.evento} · ${row.prueba} · ${row.categoria}
         </div>
-        <div class="rc-submeta">${row.genero} · ${row.sesionNombre}</div>
+        <div class="rc-submeta">${getResultSecondaryMeta(row)}</div>
+        ${relayMembers}
       </div>
       <div class="rc-right">
         <span class="rc-time">${row.displayTime}</span>
@@ -475,6 +507,16 @@ function renderResults() {
         <span class="rc-points">${row.puntos} pts</span>
       </div>
     `;
+    const relayToggleBtn = card.querySelector('[data-relay-toggle]');
+    if (relayToggleBtn) {
+      relayToggleBtn.addEventListener('click', (event) => {
+        event.stopPropagation();
+        const key = relayToggleBtn.dataset.relayToggle;
+        if (expandedRelayResults.has(key)) expandedRelayResults.delete(key);
+        else expandedRelayResults.add(key);
+        renderResults();
+      });
+    }
     list.appendChild(card);
   });
 
@@ -555,29 +597,59 @@ function renderOfficialRanking(targetId, rows) {
 
 function buildMedallero(rows) {
   const medalists = new Map();
-
-  rows.forEach((row) => {
-    if (row.dq || row.ns || row.exhibition || ![1, 2, 3].includes(row.pos)) return;
-
-    const key = `${row.nombre}|${row.equipo}`;
+  const ensureEntry = (nombre, equipo, teamName, genero, entityType = 'athlete') => {
+    const key = `${entityType}|${nombre}|${equipo}`;
     if (!medalists.has(key)) {
       medalists.set(key, {
-        nombre: row.nombre,
-        equipo: row.equipo,
-        teamName: row.teamName || row.equipo,
-        genero: row.genero,
+        nombre,
+        equipo,
+        teamName: teamName || equipo,
+        genero,
+        entityType,
         gold: 0,
         silver: 0,
         bronze: 0,
         total: 0
       });
     }
+    return medalists.get(key);
+  };
 
-    const athlete = medalists.get(key);
-    if (row.pos === 1) athlete.gold += 1;
-    if (row.pos === 2) athlete.silver += 1;
-    if (row.pos === 3) athlete.bronze += 1;
-    athlete.total += 1;
+  rows.forEach((row) => {
+    if (row.dq || row.ns || row.nt || row.exhibition || ![1, 2, 3].includes(row.pos)) return;
+
+    const addMedal = (athlete) => {
+      if (row.pos === 1) athlete.gold += 1;
+      if (row.pos === 2) athlete.silver += 1;
+      if (row.pos === 3) athlete.bronze += 1;
+      athlete.total += 1;
+    };
+
+    if (row.relay && Array.isArray(row.integrantes) && row.integrantes.length) {
+      const teamEntry = ensureEntry(
+        row.teamName || row.nombre,
+        row.equipo,
+        row.teamName || row.equipo,
+        row.genero,
+        'team'
+      );
+      addMedal(teamEntry);
+
+      row.integrantes.forEach((item) => {
+        const athlete = ensureEntry(
+          item.nombre,
+          row.equipo,
+          row.teamName || row.equipo,
+          item.genero || row.genero,
+          'athlete'
+        );
+        addMedal(athlete);
+      });
+      return;
+    }
+
+    const athlete = ensureEntry(row.nombre, row.equipo, row.teamName || row.equipo, row.genero, 'athlete');
+    addMedal(athlete);
   });
 
   return [...medalists.values()].sort((a, b) => (
@@ -595,9 +667,11 @@ function renderMedallero(rows) {
   const medallero = buildMedallero(rows).filter((athlete) => (
     !activeMedalBuscar
     || athlete.nombre.toLowerCase().includes(activeMedalBuscar)
+    || athlete.teamName.toLowerCase().includes(activeMedalBuscar)
+    || athlete.equipo.toLowerCase().includes(activeMedalBuscar)
   ));
 
-  info.textContent = `${medallero.length} concursante${medallero.length !== 1 ? 's' : ''} con medallas`;
+  info.textContent = `${medallero.length} registro${medallero.length !== 1 ? 's' : ''} con medallas`;
   list.innerHTML = '';
 
   if (!medallero.length) {
@@ -615,7 +689,7 @@ function renderMedallero(rows) {
     card.innerHTML = `
       <div class="rk-body">
         <div class="rk-name">${athlete.nombre}</div>
-        <div class="rk-events"><span class="equipo-tag">${athlete.equipo}</span> · ${athlete.genero}</div>
+        <div class="rk-events"><span class="equipo-tag">${athlete.equipo}</span> · ${athlete.entityType === 'team' ? 'Equipo' : athlete.genero}</div>
       </div>
       <div class="medal-summary">
         <span class="medal-pill gold">🥇 ${athlete.gold}</span>
