@@ -35,6 +35,7 @@ let activeBuscar = '';
 let activePodioSesion = 'all';
 let activePodioGenero = 'all';
 let activeMedalBuscar = '';
+let activeMedalleroType = 'all';
 let expandedRelayResults = new Set();
 let promoPopupTimer = null;
 
@@ -665,10 +666,13 @@ function renderMedallero(rows) {
   const list = document.getElementById('medalleroList');
   const info = document.getElementById('medalleroInfo');
   const medallero = buildMedallero(rows).filter((athlete) => (
+    (activeMedalleroType === 'all' || athlete.entityType === activeMedalleroType)
+    && (
     !activeMedalBuscar
     || athlete.nombre.toLowerCase().includes(activeMedalBuscar)
     || athlete.teamName.toLowerCase().includes(activeMedalBuscar)
     || athlete.equipo.toLowerCase().includes(activeMedalBuscar)
+    )
   ));
 
   info.textContent = `${medallero.length} registro${medallero.length !== 1 ? 's' : ''} con medallas`;
@@ -698,6 +702,18 @@ function renderMedallero(rows) {
       </div>
     `;
     list.appendChild(card);
+  });
+}
+
+function initMedalleroSwitch() {
+  const buttons = document.querySelectorAll('[data-medallero-target]');
+  buttons.forEach((button) => {
+    button.addEventListener('click', () => {
+      activeMedalleroType = button.dataset.medalleroTarget;
+      buttons.forEach((node) => node.classList.remove('active'));
+      button.classList.add('active');
+      renderMedallero(allData);
+    });
   });
 }
 
@@ -732,6 +748,7 @@ function init() {
   renderOfficialRanking('rankingListMen', RECORDS.rankingsOficiales.men);
   renderMedallero(allData);
   initRankingSwitch();
+  initMedalleroSwitch();
   schedulePromoPopup();
 
   document.getElementById('filterBuscar').addEventListener('input', (event) => {
