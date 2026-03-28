@@ -128,9 +128,12 @@ function buildFilterOptions(data) {
 function renderStats(data) {
   const visibles = data.filter((r) => !r.ns);
   const atletasUnicos = new Set(
-    visibles
-      .filter((r) => !r.relay)
-      .map((r) => String(r.nombre || '').trim().toLocaleLowerCase('es'))
+    visibles.flatMap((row) => {
+      if (row.relay && Array.isArray(row.integrantes)) {
+        return row.integrantes.map((item) => item.nombre);
+      }
+      return row.relay ? [] : [row.nombre];
+    })
       .map((name) => normalizeAthleteName(name))
       .filter(Boolean)
   ).size;
