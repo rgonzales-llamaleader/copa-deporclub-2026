@@ -32,6 +32,12 @@ let promoPopupTimer = null;
 const PROMO_POPUP_DELAY_MS = 30 * 1000;
 const PROMO_POPUP_COOLDOWN_MS = 2 * 60 * 60 * 1000;
 const PROMO_POPUP_STORAGE_KEY = 'deporclubPromoPopupLastShownAt';
+const SESSION_PILL_LABELS = {
+  'Primera Sesion': '25 marzo',
+  'Segunda Sesion': '26 marzo',
+  'Tercera Fecha': '27 marzo',
+  'Tercera Sesion': '27 marzo'
+};
 
 const isDesktop = () => window.innerWidth >= 768;
 
@@ -87,6 +93,20 @@ function renderStats(data) {
   ).size;
   document.getElementById('statPruebas').textContent = RECORDS.meta.eventos;
   document.getElementById('headerSub').textContent = `${RECORDS.meta.fechas} · ${RECORDS.meta.sesion}`;
+}
+
+function renderDatasetCopy(data) {
+  const rankingSubtitle = document.getElementById('rankingSubtitle');
+  const medalleroSubtitle = document.getElementById('medalleroSubtitle');
+  const corte = RECORDS.validacion?.provisional ? 'Corte preliminar' : 'Acumulado oficial';
+
+  if (rankingSubtitle) {
+    rankingSubtitle.textContent = `${corte} hasta el Evento ${RECORDS.meta.eventos} · ${data.length} resultados procesados`;
+  }
+
+  if (medalleroSubtitle) {
+    medalleroSubtitle.textContent = `Medallas acumuladas por atleta en todos los eventos disputados hasta el Evento ${RECORDS.meta.eventos}`;
+  }
 }
 
 function initTabs() {
@@ -226,11 +246,18 @@ function applyFilters() {
 function initCategoryPills(data) {
   const dateContainer = document.getElementById('datePills');
   const genderContainer = document.getElementById('genderPills');
+  const sessionPills = [...new Map(
+    [...data]
+      .sort((a, b) => a.sesion - b.sesion || a.evento - b.evento)
+      .map((row) => [row.sesionNombre, row.sesion])
+  ).entries()];
 
   const datePills = [
     { label: 'Todas', value: 'all' },
-    { label: '25 marzo', value: 'Primera Sesion' },
-    { label: '26 marzo', value: 'Segunda Sesion' }
+    ...sessionPills.map(([sessionName]) => ({
+      label: SESSION_PILL_LABELS[sessionName] || sessionName,
+      value: sessionName
+    }))
   ];
 
   const genderPills = [
@@ -565,6 +592,7 @@ function init() {
   filtered = [...allData];
 
   renderStats(allData);
+  renderDatasetCopy(allData);
   buildFilterOptions(allData);
   initTabs();
   initCategoryPills(allData);
