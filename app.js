@@ -100,6 +100,16 @@ function populateSelect(id, values, allLabel) {
   el.value = current;
 }
 
+function normalizeAthleteName(name) {
+  return String(name || '')
+    .replace(/ϐ|β/g, 'f')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLocaleLowerCase('es')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function buildFilterOptions(data) {
   populateSelect('filterSesion', new Set(data.map((r) => r.sesionNombre)), 'Todas');
   populateSelect('filterGenero', new Set(data.map((r) => r.genero)), 'Todos');
@@ -112,7 +122,9 @@ function renderStats(data) {
   const visibles = data.filter((r) => !r.ns);
   const atletasUnicos = new Set(
     visibles
+      .filter((r) => !r.relay)
       .map((r) => String(r.nombre || '').trim().toLocaleLowerCase('es'))
+      .map((name) => normalizeAthleteName(name))
       .filter(Boolean)
   ).size;
   document.getElementById('statAtletas').textContent = atletasUnicos;
