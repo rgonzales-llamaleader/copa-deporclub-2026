@@ -110,7 +110,12 @@ function buildFilterOptions(data) {
 
 function renderStats(data) {
   const visibles = data.filter((r) => !r.ns);
-  document.getElementById('statAtletas').textContent = visibles.length;
+  const atletasUnicos = new Set(
+    visibles
+      .map((r) => String(r.nombre || '').trim().toLocaleLowerCase('es'))
+      .filter(Boolean)
+  ).size;
+  document.getElementById('statAtletas').textContent = atletasUnicos;
   document.getElementById('statEquipos').textContent = new Set(data.map((r) => r.equipo)).size;
   document.getElementById('statCategorias').textContent = new Set(
     data.map((r) => `${r.evento}|${r.genero}|${r.prueba}|${r.categoria}`)
