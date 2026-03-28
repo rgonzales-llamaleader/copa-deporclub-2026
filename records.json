@@ -56672,7 +56672,7 @@
       {
         "rank": 7,
         "teamName": "Aquaxtreme",
-        "points": 99
+        "points": 101
       },
       {
         "rank": 8,
@@ -56680,22 +56680,22 @@
         "points": 56
       },
       {
-        "rank": 9,
+        "rank": 8,
         "teamName": "Asociacion Yaku Ukupi Pz",
-        "points": 55
+        "points": 56
       },
       {
-        "rank": 9,
+        "rank": 10,
         "teamName": "Kinetic Aquatic",
         "points": 55
       },
       {
         "rank": 11,
         "teamName": "Club Edcymar Nadadores",
-        "points": 50
+        "points": 54
       },
       {
-        "rank": 11,
+        "rank": 12,
         "teamName": "Makabe Club",
         "points": 50
       },
@@ -56711,13 +56711,13 @@
       },
       {
         "rank": 15,
-        "teamName": "Club de Natacion Iron Swimmers",
+        "teamName": "Club de Natacion Los Olivos",
         "points": 36
       },
       {
-        "rank": 16,
-        "teamName": "Club de Natacion Los Olivos",
-        "points": 34
+        "rank": 15,
+        "teamName": "Club de Natacion Iron Swimmers",
+        "points": 36
       },
       {
         "rank": 17,
@@ -56730,29 +56730,29 @@
         "points": 22
       },
       {
-        "rank": 19,
+        "rank": 18,
         "teamName": "Natacion Augusto Del Aguila",
-        "points": 21
+        "points": 22
       },
       {
         "rank": 20,
         "teamName": "Centro Deportivo La Catolica",
-        "points": 20
+        "points": 21
       },
       {
-        "rank": 20,
+        "rank": 21,
         "teamName": "Club Casuarinas",
         "points": 20
       },
       {
-        "rank": 20,
+        "rank": 21,
         "teamName": "Club de Natacion El Delfin",
         "points": 20
       },
       {
         "rank": 23,
         "teamName": "Club Tennis Huacho",
-        "points": 15
+        "points": 13
       },
       {
         "rank": 24,
@@ -56761,12 +56761,12 @@
       },
       {
         "rank": 24,
-        "teamName": "Club Alborada Natacion",
+        "teamName": "Club Bravos del Sur",
         "points": 12
       },
       {
         "rank": 24,
-        "teamName": "Club Bravos del Sur",
+        "teamName": "Club Alborada Natacion",
         "points": 12
       },
       {
@@ -56787,7 +56787,7 @@
       {
         "rank": 30,
         "teamName": "Club Deportivo Santa Maria Rei",
-        "points": 5
+        "points": 6
       },
       {
         "rank": 31,
@@ -56797,6 +56797,11 @@
       {
         "rank": 32,
         "teamName": "Planeta Aquatic Center",
+        "points": 2
+      },
+      {
+        "rank": 32,
+        "teamName": "Rocodiving Club",
         "points": 2
       }
     ],
@@ -56844,27 +56849,27 @@
       {
         "rank": 9,
         "teamName": "Club Edcymar Nadadores",
-        "points": 55
+        "points": 56
       },
       {
         "rank": 10,
         "teamName": "Germania",
-        "points": 53
+        "points": 52
       },
       {
         "rank": 11,
-        "teamName": "Country Club La Planicie",
+        "teamName": "H2g0",
         "points": 51
       },
       {
         "rank": 12,
-        "teamName": "H2g0",
-        "points": 50
+        "teamName": "Kinetic Aquatic",
+        "points": 49
       },
       {
         "rank": 13,
-        "teamName": "Kinetic Aquatic",
-        "points": 49
+        "teamName": "Country Club La Planicie",
+        "points": 45
       },
       {
         "rank": 14,
@@ -56878,21 +56883,21 @@
       },
       {
         "rank": 16,
-        "teamName": "Centro Deportivo La Catolica",
+        "teamName": "Club Nadadora",
         "points": 27
       },
       {
         "rank": 16,
-        "teamName": "Club Nadadora",
+        "teamName": "Centro Deportivo La Catolica",
         "points": 27
       },
       {
         "rank": 18,
         "teamName": "Club Batavia Nadadores",
-        "points": 25
+        "points": 26
       },
       {
-        "rank": 18,
+        "rank": 19,
         "teamName": "Club Tennis Las Terrazas Miraf",
         "points": 25
       },
@@ -56909,17 +56914,17 @@
       {
         "rank": 22,
         "teamName": "Country Club Villa",
-        "points": 13
+        "points": 14
+      },
+      {
+        "rank": 23,
+        "teamName": "Club Alborada Natacion",
+        "points": 12
       },
       {
         "rank": 23,
         "teamName": "Asociacion Estadio La Union",
         "points": 12
-      },
-      {
-        "rank": 24,
-        "teamName": "Club Alborada Natacion",
-        "points": 11
       },
       {
         "rank": 25,
@@ -56928,12 +56933,12 @@
       },
       {
         "rank": 26,
-        "teamName": "El Buen Pastor Swimming Club",
+        "teamName": "Escuela Paola Amarildo & Benav",
         "points": 9
       },
       {
         "rank": 26,
-        "teamName": "Escuela Paola Amarildo & Benav",
+        "teamName": "El Buen Pastor Swimming Club",
         "points": 9
       },
       {
@@ -56943,7 +56948,7 @@
       },
       {
         "rank": 29,
-        "teamName": "Club Bravos del Sur",
+        "teamName": "Jjj Kadar",
         "points": 7
       },
       {
@@ -56952,37 +56957,42 @@
         "points": 7
       },
       {
-        "rank": 31,
+        "rank": 29,
+        "teamName": "Club Bravos del Sur",
+        "points": 7
+      },
+      {
+        "rank": 32,
         "teamName": "Club Swimming Gold",
         "points": 6
       },
       {
-        "rank": 32,
+        "rank": 33,
         "teamName": "Club Tennis Huacho",
         "points": 5
       },
       {
-        "rank": 32,
+        "rank": 33,
         "teamName": "Real Club de Lima",
         "points": 5
       },
       {
-        "rank": 34,
+        "rank": 35,
         "teamName": "Palacio de la Juventud",
         "points": 4
       },
       {
-        "rank": 34,
+        "rank": 35,
         "teamName": "Planeta Aquatic Center",
         "points": 4
       },
       {
-        "rank": 36,
+        "rank": 37,
         "teamName": "Atlantes Club",
         "points": 3
       },
       {
-        "rank": 37,
+        "rank": 38,
         "teamName": "Asociacion Extreme Shark",
         "points": 2
       }
@@ -56991,12 +57001,12 @@
   "validacion": {
     "provisional": false,
     "source": "pdf-consolidado-tercera-fecha-final-2026-03-28",
-    "officialScope": "combined-team-scores-through-event-36",
+    "officialScope": "team-scores-through-event-36-combined-women-men",
     "totals": {
       "official": {
         "combined": 3144,
-        "women": null,
-        "men": null
+        "women": 1565,
+        "men": 1579
       },
       "computed": {
         "combined": 3127,
@@ -57005,8 +57015,8 @@
       },
       "delta": {
         "combined": -17.0,
-        "women": null,
-        "men": null
+        "women": -12,
+        "men": -5
       }
     },
     "rows": {
