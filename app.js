@@ -1,15 +1,23 @@
 'use strict';
 
-const SWIM_RECORDS = {
+const DEFAULT_SWIM_RECORDS = {
   Damas: {
     '400 LC Metros Libre': { RM: '3:54.18', RN: '4:17.21' },
     '200 LC Metros Comb. Ind.': { RM: '2:05.70', RN: '2:14.70' },
-    '200 LC Metros Espalda': { RM: '2:03.14', RN: '2:13.80' }
+    '200 LC Metros Espalda': { RM: '2:03.14', RN: '2:13.80' },
+    '50 LC Metros Libre': { RM: '23.61', RN: '25.80' },
+    '100 LC Metros Espalda': { RM: '57.13', RN: '1:01.99' },
+    '50 LC Metros Pecho': { RM: '29.16', RN: '32.53' },
+    '100 LC Metros Mariposa': { RM: '54.60', RN: '1:00.16' }
   },
   Varones: {
     '400 LC Metros Libre': { RM: '3:39.96', RN: '3:52.18' },
     '200 LC Metros Comb. Ind.': { RM: '1:52.69', RN: '2:04.03' },
-    '200 LC Metros Espalda': { RM: '1:51.92', RN: '2:03.10' }
+    '200 LC Metros Espalda': { RM: '1:51.92', RN: '2:03.10' },
+    '50 LC Metros Libre': { RM: '20.91', RN: '23.08' },
+    '100 LC Metros Espalda': { RM: '51.60', RN: '56.96' },
+    '50 LC Metros Pecho': { RM: '25.95', RN: '28.96' },
+    '100 LC Metros Mariposa': { RM: '49.45', RN: '52.91' }
   }
 };
 
@@ -55,12 +63,28 @@ function timeToSec(str) {
 
 function getRecordBadge(row) {
   if (row.dq || row.ns) return null;
-  const refs = SWIM_RECORDS[row.genero]?.[row.prueba];
+  const refs = getRecordRefs(row);
   if (!refs) return null;
   const time = timeToSec(row.tiempo);
-  if (time <= timeToSec(refs.RM)) return 'RM';
-  if (time <= timeToSec(refs.RN)) return 'RN';
+  if (time <= timeToSec(refs.RM.time)) return 'RM';
+  if (time <= timeToSec(refs.RN.time)) return 'RN';
   return null;
+}
+
+function getRecordRefs(row) {
+  return RECORDS.meta?.swimRecords?.[row.genero]?.[row.prueba]
+    || DEFAULT_SWIM_RECORDS[row.genero]?.[row.prueba]
+    || null;
+}
+
+function getPodioMeta(row) {
+  if (row.relay) return `Relevo ${row.relayLabel} · ${row.puntos} pts`;
+  return `${row.edad} años · ${row.puntos} pts`;
+}
+
+function getResultSecondaryMeta(row) {
+  if (!row.relay || !Array.isArray(row.integrantes) || !row.integrantes.length) return `${row.genero} Â· ${row.sesionNombre}`;
+  return `Relevo ${row.relayLabel} Â· ${row.integrantes.map((item) => item.nombre).join(' / ')}`;
 }
 
 function populateSelect(id, values, allLabel) {
@@ -310,6 +334,7 @@ function renderPodios(data, sessionFilter = 'all', genderFilter = 'all') {
     .sort((a, b) => a[0].evento - b[0].evento || a[0].categoria.localeCompare(b[0].categoria, 'es'))
     .forEach((rows) => {
       const first = rows[0];
+      const recordRefs = getRecordRefs(first);
       const top3 = rows
         .filter((row) => !row.dq && !row.ns && !row.exhibition)
         .sort((a, b) => (a.pos || 999) - (b.pos || 999))
@@ -323,18 +348,30 @@ function renderPodios(data, sessionFilter = 'all', genderFilter = 'all') {
         <div class="podio-header">
           <div class="podio-header-title">Evento ${first.evento} · ${first.genero} · ${first.categoria}</div>
           <div class="podio-header-sub">${first.prueba} · ${first.sesionNombre}</div>
+          ${recordRefs ? `
+            <div class="podio-records">
+              <span class="rec-badge rm">RM</span>
+              <span>${recordRefs.RM.time}</span>
+              <span class="rec-name">${recordRefs.RM.name}</span>
+              <span class="rec-badge rn">RN</span>
+              <span>${recordRefs.RN.time}</span>
+              <span class="rec-name">${recordRefs.RN.name}</span>
+            </div>
+          ` : ''}
         </div>
         <div class="podio-places">
           ${top3.map((row, index) => {
             const badge = getRecordBadge(row);
+            const breakerClass = badge ? ` record-breaker ${badge.toLowerCase()}-breaker` : '';
+            const badgeLabel = badge === 'RM' ? '&#128293; RM' : '&#128293; RN';
             return `
-              <div class="podio-place p${index + 1}">
+              <div class="podio-place p${index + 1}${breakerClass}">
                 <span class="medal-icon">${['🥇', '🥈', '🥉'][index]}</span>
                 <div class="place-body">
-                  <div class="place-name">${row.nombre}${badge ? ` <span class="record-pill ${badge.toLowerCase()}">${badge}</span>` : ''}</div>
+                  <div class="place-name">${row.nombre}${badge ? ` <span class="record-pill ${badge.toLowerCase()}">${badgeLabel}</span>` : ''}</div>
                   <div class="place-meta"><span class="equipo-tag">${row.equipo}</span> · ${row.edad} años · ${row.puntos} pts</div>
                 </div>
-                <span class="place-time">${row.displayTime}</span>
+                <span class="place-time${badge ? ' record-time' : ''}">${row.displayTime}</span>
               </div>
             `;
           }).join('')}
