@@ -138,29 +138,77 @@
 
 <div id="metricas" class="tab-content">
   <div class="ranking-header">
-    <p class="ranking-subtitle" id="metricsSubtitle">Simulación del ranking si los menores de la cuarta sesión también hubieran puntuado</p>
+    <p class="ranking-subtitle" id="metricsSubtitle">Explora simulaciones y patrones de fortaleza por equipo</p>
   </div>
-  <div class="metrics-grid" id="metricsSummary"></div>
-  <div class="metrics-note" id="metricsNote"></div>
-  <div class="ranking-switch metrics-switch" id="metricsSwitch">
-    <button class="ranking-switch-btn active metrics-switch-btn" data-metrics-target="combined">Puntaje total</button>
-    <button class="ranking-switch-btn metrics-switch-btn" data-metrics-target="women">Mujeres</button>
-    <button class="ranking-switch-btn metrics-switch-btn" data-metrics-target="men">Hombres</button>
+  <div class="ranking-switch metrics-view-switch" id="metricsViewSwitch">
+    <button class="ranking-switch-btn active metrics-view-btn" data-metric-view="simulation">Simulacion Menores</button>
+    <button class="ranking-switch-btn metrics-view-btn" data-metric-view="dominance">Dominancia por estilos</button>
+    <button class="ranking-switch-btn metrics-view-btn" data-metric-view="style-heatmap">Heatmap estilo</button>
+    <button class="ranking-switch-btn metrics-view-btn" data-metric-view="category-heatmap">Heatmap categoría</button>
   </div>
-  <div class="ranking-sections metrics-sections">
-    <section class="ranking-block metrics-block active" data-metrics-panel="combined">
-      <h3>Ranking simulado total</h3>
-      <div id="metricsListCombined"></div>
-    </section>
-    <section class="ranking-block metrics-block" data-metrics-panel="women">
-      <h3>Ranking simulado mujeres</h3>
-      <div id="metricsListWomen"></div>
-    </section>
-    <section class="ranking-block metrics-block" data-metrics-panel="men">
-      <h3>Ranking simulado hombres</h3>
-      <div id="metricsListMen"></div>
-    </section>
-  </div>
+
+  <section class="metrics-view active" data-metric-panel="simulation">
+    <div class="metrics-grid" id="metricsSummary"></div>
+    <div class="metrics-note" id="metricsNote"></div>
+    <div class="ranking-switch metrics-switch" id="metricsSimulationSwitch">
+      <button class="ranking-switch-btn active metrics-switch-btn" data-metrics-target="combined">General menores</button>
+      <button class="ranking-switch-btn metrics-switch-btn" data-metrics-target="women">Mujeres</button>
+      <button class="ranking-switch-btn metrics-switch-btn" data-metrics-target="men">Hombres</button>
+    </div>
+    <div class="ranking-sections metrics-sections">
+      <section class="ranking-block metrics-block active" data-metrics-panel="combined">
+        <h3>Campeonato simulado de menores</h3>
+        <div id="metricsListCombined"></div>
+      </section>
+      <section class="ranking-block metrics-block" data-metrics-panel="women">
+        <h3>Ranking simulado mujeres</h3>
+        <div id="metricsListWomen"></div>
+      </section>
+      <section class="ranking-block metrics-block" data-metrics-panel="men">
+        <h3>Ranking simulado hombres</h3>
+        <div id="metricsListMen"></div>
+      </section>
+    </div>
+  </section>
+
+  <section class="metrics-view" data-metric-panel="dominance">
+    <div class="metrics-grid" id="styleLeadersSummary"></div>
+    <div class="metrics-note" id="styleDominanceNote"></div>
+    <div class="metrics-dual">
+      <div class="metrics-panel">
+        <h3>Líder por estilo</h3>
+        <div id="styleDominanceList"></div>
+      </div>
+      <div class="metrics-panel">
+        <h3>Estilo dominante por equipo</h3>
+        <div id="teamStyleProfileList"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="metrics-view" data-metric-panel="style-heatmap">
+    <div class="metrics-note" id="styleHeatmapNote"></div>
+    <div class="heatmap-wrap">
+      <div class="heatmap-legend">
+        <span>Baja intensidad</span>
+        <div class="heatmap-legend-bar heatmap-legend-style"></div>
+        <span>Alta intensidad</span>
+      </div>
+      <div id="styleHeatmap"></div>
+    </div>
+  </section>
+
+  <section class="metrics-view" data-metric-panel="category-heatmap">
+    <div class="metrics-note" id="categoryHeatmapNote"></div>
+    <div class="heatmap-wrap">
+      <div class="heatmap-legend">
+        <span>Baja intensidad</span>
+        <div class="heatmap-legend-bar heatmap-legend-category"></div>
+        <span>Alta intensidad</span>
+      </div>
+      <div id="categoryHeatmap"></div>
+    </div>
+  </section>
 </div>
 
 <div id="resultados" class="tab-content">

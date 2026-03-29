@@ -596,7 +596,7 @@ function renderOfficialRanking(targetId, rows) {
     const wrapper = document.createElement('div');
     wrapper.className = `ranking-row ${index === 0 ? 'rk-gold' : index === 1 ? 'rk-silver' : index === 2 ? 'rk-bronze' : ''}`;
     wrapper.innerHTML = `
-      <div class="rk-pos">${index < 3 ? ['🥇', '🥈', '🥉'][index] : team.rank}</div>
+      <div class="rk-pos">${index < 3 ? ['&#129351;', '&#129352;', '&#129353;'][index] : team.rank}</div>
       <div class="rk-body">
         <div class="rk-name">${team.teamName}</div>
       </div>
@@ -626,11 +626,6 @@ function buildRankedTable(pointsMap) {
 
 function buildMinorPointsSimulation(rows) {
   const simulationRows = rows.filter((row) => row.sesion === 4);
-  const official = {
-    combined: new Map(RECORDS.rankingsOficiales.combined.map((item) => [item.teamName, Number(item.points)])),
-    women: new Map(RECORDS.rankingsOficiales.women.map((item) => [item.teamName, Number(item.points)])),
-    men: new Map(RECORDS.rankingsOficiales.men.map((item) => [item.teamName, Number(item.points)]))
-  };
   const added = {
     combined: new Map(),
     women: new Map(),
@@ -685,31 +680,14 @@ function buildMinorPointsSimulation(rows) {
 
   const rankings = {};
   ['combined', 'women', 'men'].forEach((scope) => {
-    const merged = new Map(official[scope]);
-    added[scope].forEach((points, teamName) => {
-      merged.set(teamName, (merged.get(teamName) || 0) + points);
-    });
-
-    const previousPositions = new Map(
-      buildRankedTable(official[scope]).map((team) => [team.teamName, team.rank])
-    );
-
-    rankings[scope] = buildRankedTable(merged).map((team) => {
-      const addedPoints = Number(cleanPoints(added[scope].get(team.teamName) || 0));
-      const previousRank = previousPositions.get(team.teamName) || null;
-      return {
-        ...team,
-        addedPoints,
-        previousRank,
-        rankChange: previousRank ? previousRank - team.rank : 0
-      };
-    });
+    rankings[scope] = buildRankedTable(added[scope]).map((team) => ({
+      ...team,
+      addedPoints: Number(cleanPoints(team.points))
+    }));
   });
 
   const combinedImpact = rankings.combined.filter((team) => team.addedPoints > 0);
-  const topMover = combinedImpact
-    .slice()
-    .sort((a, b) => b.rankChange - a.rankChange || b.addedPoints - a.addedPoints || a.teamName.localeCompare(b.teamName, 'es'))[0] || null;
+  const leader = rankings.combined[0] || null;
 
   return {
     rankings,
@@ -717,8 +695,9 @@ function buildMinorPointsSimulation(rows) {
       totalAddedPoints: Number(cleanPoints([...added.combined.values()].reduce((sum, value) => sum + value, 0))),
       impactedTeams: combinedImpact.length,
       eventsSimulated: new Set(simulationRows.map((row) => row.evento)).size,
-      leader: rankings.combined[0] || null,
-      topMover
+      leader,
+      womenLeader: rankings.women[0] || null,
+      menLeader: rankings.men[0] || null
     }
   };
 }
@@ -729,16 +708,14 @@ function renderSimulationRanking(targetId, rows) {
 
   rows.forEach((team, index) => {
     const wrapper = document.createElement('div');
-    const moveClass = team.rankChange > 0 ? 'is-up' : team.rankChange < 0 ? 'is-down' : '';
     wrapper.className = `ranking-row metrics-row ${index === 0 ? 'rk-gold' : index === 1 ? 'rk-silver' : index === 2 ? 'rk-bronze' : ''}`;
     wrapper.innerHTML = `
       <div class="rk-pos">${index < 3 ? ['&#129351;', '&#129352;', '&#129353;'][index] : team.rank}</div>
       <div class="rk-body">
         <div class="rk-name">${team.teamName}</div>
         <div class="rk-events">
-          <span class="metrics-delta ${moveClass}">${team.rankChange > 0 ? `Sube ${team.rankChange}` : team.rankChange < 0 ? `Baja ${Math.abs(team.rankChange)}` : 'Sin cambio'}</span>
-          · +${cleanPoints(team.addedPoints)} pts simulados
-          ${team.previousRank ? `· antes ${team.previousRank}` : ''}
+          <span class="metrics-delta is-up">Menores</span>
+          | ${cleanPoints(team.addedPoints)} pts en este campeonato
         </div>
       </div>
       <div class="rk-points">
@@ -758,36 +735,276 @@ function renderMetrics(rows) {
 
   summaryContainer.innerHTML = `
     <article class="metric-card">
-      <span class="metric-label">Puntos simulados</span>
+      <span class="metric-label">Puntos del campeonato</span>
       <strong class="metric-value">${cleanPoints(summary.totalAddedPoints)}</strong>
-      <span class="metric-copy">Puntaje total que habrían aportado los menores de la cuarta sesión.</span>
+      <span class="metric-copy">Puntaje total repartido dentro de este campeonato simulado de menores.</span>
     </article>
     <article class="metric-card">
-      <span class="metric-label">Equipos impactados</span>
+      <span class="metric-label">Equipos clasificados</span>
       <strong class="metric-value">${summary.impactedTeams}</strong>
-      <span class="metric-copy">Clubes que habrían sumado al menos un punto en la simulación.</span>
+      <span class="metric-copy">Clubes que sumarian puntos si los menores tuvieran su propio campeonato.</span>
     </article>
     <article class="metric-card">
-      <span class="metric-label">Líder simulado</span>
-      <strong class="metric-value metric-team">${summary.leader?.teamName || '—'}</strong>
-      <span class="metric-copy">${summary.leader ? `${cleanPoints(summary.leader.points)} pts en el acumulado total.` : 'Sin datos disponibles.'}</span>
+      <span class="metric-label">Lider general</span>
+      <strong class="metric-value metric-team">${summary.leader?.teamName || '-'}</strong>
+      <span class="metric-copy">${summary.leader ? `${cleanPoints(summary.leader.points)} pts en el campeonato de menores.` : 'Sin datos disponibles.'}</span>
     </article>
     <article class="metric-card">
-      <span class="metric-label">Mayor subida</span>
-      <strong class="metric-value metric-team">${summary.topMover?.teamName || '—'}</strong>
-      <span class="metric-copy">${summary.topMover ? `Sube ${summary.topMover.rankChange} puesto(s) con +${cleanPoints(summary.topMover.addedPoints)} pts.` : 'Sin cambios de posición.'}</span>
+      <span class="metric-label">Lideres por rama</span>
+      <strong class="metric-value metric-team">${summary.womenLeader?.teamName || '-'}</strong>
+      <span class="metric-copy">${summary.womenLeader ? `Damas: ${cleanPoints(summary.womenLeader.points)} pts` : 'Sin lider en damas.'}${summary.menLeader ? ` | Varones: ${summary.menLeader.teamName} ${cleanPoints(summary.menLeader.points)} pts` : ''}</span>
     </article>
   `;
 
   note.innerHTML = `
-    <strong>Supuesto de la simulación:</strong> se aplicó la escala normal de puntaje a los eventos 37 al 53 de la cuarta sesión.
-    Individuales: 9-7-6-5-4-3-2-1. Postas: 18-14-12-10-8-6-4-2 por equipo.
-    Los empates reparten promedio y las postas siguen sumando sólo al club.
+    <strong>Supuesto de la simulacion:</strong> esta vista trata a la cuarta sesion como si fuera un campeonato separado de menores.
+    No se mezcla con el ranking oficial del meet. Individuales: 9-7-6-5-4-3-2-1. Postas: 18-14-12-10-8-6-4-2 por equipo.
+    Los empates reparten promedio y las postas siguen sumando solo al club.
   `;
 
   renderSimulationRanking('metricsListCombined', simulation.rankings.combined);
   renderSimulationRanking('metricsListWomen', simulation.rankings.women);
   renderSimulationRanking('metricsListMen', simulation.rankings.men);
+  renderStyleMetrics(rows);
+  renderHeatmaps(rows);
+}
+
+function getMetricStyle(row) {
+  if (row.relay) return 'Relevos';
+  if (row.prueba.includes('Libre')) return 'Libre';
+  if (row.prueba.includes('Espalda')) return 'Espalda';
+  if (row.prueba.includes('Pecho')) return 'Pecho';
+  if (row.prueba.includes('Mariposa')) return 'Mariposa';
+  if (row.prueba.includes('Comb')) return 'Combinado';
+  return 'Otros';
+}
+
+function getCategoryOrderLabel(category) {
+  const order = ['8 Años de Edad', '9 Años de Edad', '10 Años de Edad', '9-10', '11 Años de Edad', '12 Años de Edad', '11-12', '13-14', '15-17', '18 & Over'];
+  const index = order.indexOf(category);
+  return index === -1 ? 999 : index;
+}
+
+function buildOfficialTeamMetricData(rows) {
+  const scoringRows = rows.filter((row) => (
+    Number(row.puntosOficiales || row.puntos || 0) > 0
+    && !row.exhibition
+    && !row.dq
+    && !row.ns
+    && !row.nt
+  ));
+  const rankedTeams = RECORDS.rankingsOficiales.combined.map((item) => item.teamName);
+  const extraTeams = [...new Set(scoringRows.map((row) => row.teamName))]
+    .filter((teamName) => !rankedTeams.includes(teamName));
+  const topTeams = [...rankedTeams, ...extraTeams];
+  const styleOrder = ['Libre', 'Espalda', 'Pecho', 'Mariposa', 'Combinado', 'Relevos', 'Otros'];
+  const styleMatrix = new Map();
+  const categoryMatrix = new Map();
+  const categories = [...new Set(scoringRows.map((row) => row.categoria))]
+    .sort((a, b) => getCategoryOrderLabel(a) - getCategoryOrderLabel(b) || a.localeCompare(b, 'es'));
+
+  topTeams.forEach((teamName) => {
+    styleMatrix.set(teamName, new Map());
+    categoryMatrix.set(teamName, new Map());
+  });
+
+  scoringRows.forEach((row) => {
+    if (!styleMatrix.has(row.teamName)) return;
+    const style = getMetricStyle(row);
+    const points = Number(row.puntosOficiales || row.puntos || 0);
+    styleMatrix.get(row.teamName).set(style, (styleMatrix.get(row.teamName).get(style) || 0) + points);
+    categoryMatrix.get(row.teamName).set(row.categoria, (categoryMatrix.get(row.teamName).get(row.categoria) || 0) + points);
+  });
+
+  const activeStyles = styleOrder.filter((style) => topTeams.some((team) => (styleMatrix.get(team).get(style) || 0) > 0));
+  const styleLeaders = activeStyles.map((style) => {
+    const ranking = topTeams
+      .map((teamName) => ({ teamName, points: Number(cleanPoints(styleMatrix.get(teamName).get(style) || 0)) }))
+      .filter((team) => team.points > 0)
+      .sort((a, b) => b.points - a.points || a.teamName.localeCompare(b.teamName, 'es'));
+    return {
+      style,
+      ranking,
+      leader: ranking[0] || null,
+      runnerUp: ranking[1] || null
+    };
+  }).filter((entry) => entry.leader);
+
+  const teamProfiles = topTeams.map((teamName) => {
+    const total = activeStyles.reduce((sum, style) => sum + (styleMatrix.get(teamName).get(style) || 0), 0);
+    const dominant = activeStyles
+      .map((style) => ({ style, points: styleMatrix.get(teamName).get(style) || 0 }))
+      .sort((a, b) => b.points - a.points || a.style.localeCompare(b.style, 'es'))[0];
+    return {
+      teamName,
+      total: Number(cleanPoints(total)),
+      dominantStyle: dominant?.style || 'Sin puntos',
+      dominantPoints: Number(cleanPoints(dominant?.points || 0)),
+      share: total ? Number(cleanPoints(((dominant?.points || 0) / total) * 100)) : 0
+    };
+  }).sort((a, b) => b.share - a.share || b.dominantPoints - a.dominantPoints || a.teamName.localeCompare(b.teamName, 'es'));
+
+  return {
+    topTeams,
+    activeStyles,
+    categories,
+    styleMatrix,
+    categoryMatrix,
+    styleLeaders,
+    teamProfiles
+  };
+}
+
+function renderStyleMetrics(rows) {
+  const metricData = buildOfficialTeamMetricData(rows);
+  const summary = document.getElementById('styleLeadersSummary');
+  const note = document.getElementById('styleDominanceNote');
+  const leadersList = document.getElementById('styleDominanceList');
+  const profilesList = document.getElementById('teamStyleProfileList');
+
+  summary.innerHTML = metricData.styleLeaders.map((entry) => `
+    <article class="metric-card metric-card-style">
+      <span class="metric-label">${entry.style}</span>
+      <strong class="metric-value metric-team">${entry.leader.teamName}</strong>
+      <span class="metric-copy">${cleanPoints(entry.leader.points)} pts${entry.runnerUp ? ` · margen ${cleanPoints(entry.leader.points - entry.runnerUp.points)}` : ''}</span>
+    </article>
+  `).join('');
+
+  note.innerHTML = `
+    <strong>Base del análisis:</strong> puntaje oficial acumulado por equipo hasta el Evento ${RECORDS.validacion.officialUntilEvent}.
+    La dominancia se calcula por puntos en cada estilo y el perfil de equipo muestra en qué estilo concentra más rendimiento.
+  `;
+
+  leadersList.innerHTML = metricData.styleLeaders.map((entry) => `
+    <div class="metric-style-card">
+      <div class="metric-style-head">
+        <span class="metric-style-name">${entry.style}</span>
+        <span class="metric-style-badge">${entry.ranking.length} equipos con puntos</span>
+      </div>
+      <div class="metric-style-list">
+        ${entry.ranking.slice(0, 5).map((team, index) => `
+          <div class="ranking-row metrics-row">
+            <div class="rk-pos">${index + 1}</div>
+            <div class="rk-body">
+              <div class="rk-name">${team.teamName}</div>
+              <div class="rk-events">${cleanPoints(team.points)} pts en ${entry.style}</div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `).join('');
+
+  profilesList.innerHTML = metricData.teamProfiles.map((team, index) => `
+    <div class="ranking-row metrics-row ${index === 0 ? 'rk-gold' : index === 1 ? 'rk-silver' : index === 2 ? 'rk-bronze' : ''}">
+      <div class="rk-pos">${index + 1}</div>
+      <div class="rk-body">
+        <div class="rk-name">${team.teamName}</div>
+        <div class="rk-events">${team.dominantStyle} · ${cleanPoints(team.dominantPoints)} pts · ${cleanPoints(team.share)}% de su puntaje</div>
+      </div>
+      <div class="rk-points">
+        <span class="rk-pts">${cleanPoints(team.total)}</span>
+        <span class="rk-pts-label">pts</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function getHeatmapCellStyle(value, maxValue, hue) {
+  if (!value || !maxValue) return 'background: rgba(226,232,240,.35); color: #64748b;';
+  const alpha = 0.16 + (value / maxValue) * 0.74;
+  return `background: hsla(${hue}, 82%, 46%, ${alpha}); color: ${alpha > 0.6 ? '#ffffff' : '#082f49'};`;
+}
+
+function renderHeatmap(containerId, teams, columns, matrix, hue) {
+  const target = document.getElementById(containerId);
+  const values = teams.flatMap((team) => columns.map((column) => matrix.get(team)?.get(column) || 0));
+  const maxValue = Math.max(...values, 0);
+
+  target.innerHTML = `
+    <div class="heatmap-table-wrap">
+      <table class="heatmap-table">
+        <thead>
+          <tr>
+            <th>Equipo</th>
+            ${columns.map((column) => `<th>${column}</th>`).join('')}
+          </tr>
+        </thead>
+        <tbody>
+          ${teams.map((team) => `
+            <tr>
+              <th>${team}</th>
+              ${columns.map((column) => {
+                const value = matrix.get(team)?.get(column) || 0;
+                return `<td style="${getHeatmapCellStyle(value, maxValue, hue)}">${value ? cleanPoints(value) : '—'}</td>`;
+              }).join('')}
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderHeatmaps(rows) {
+  const metricData = buildOfficialTeamMetricData(rows);
+  document.getElementById('styleHeatmapNote').innerHTML = `
+    <strong>Heatmap equipo × estilo:</strong> muestra dónde se concentra el puntaje oficial de los 12 equipos líderes.
+    Más color significa más dominio relativo en ese estilo.
+  `;
+  document.getElementById('categoryHeatmapNote').innerHTML = `
+    <strong>Heatmap equipo × categoría:</strong> deja ver en qué edades están construyendo más puntaje los equipos punteros.
+    Está basado en el acumulado oficial actual, no en la simulación de menores.
+  `;
+  renderHeatmap('styleHeatmap', metricData.topTeams, metricData.activeStyles, metricData.styleMatrix, 198);
+  renderHeatmap('categoryHeatmap', metricData.topTeams, metricData.categories, metricData.categoryMatrix, 27);
+  initHeatmapDragScroll();
+}
+
+function initHeatmapDragScroll() {
+  document.querySelectorAll('.heatmap-table-wrap').forEach((wrap) => {
+    if (wrap.dataset.dragReady === 'true') return;
+
+    let isPointerDown = false;
+    let startX = 0;
+    let startScrollLeft = 0;
+
+    wrap.dataset.dragReady = 'true';
+
+    wrap.addEventListener('pointerdown', (event) => {
+      if (event.pointerType === 'mouse' && event.button !== 0) return;
+      isPointerDown = true;
+      startX = event.clientX;
+      startScrollLeft = wrap.scrollLeft;
+      wrap.classList.add('is-dragging');
+      wrap.setPointerCapture?.(event.pointerId);
+    });
+
+    wrap.addEventListener('pointermove', (event) => {
+      if (!isPointerDown) return;
+      const deltaX = event.clientX - startX;
+      wrap.scrollLeft = startScrollLeft - deltaX;
+    });
+
+    const stopDragging = (event) => {
+      if (!isPointerDown) return;
+      isPointerDown = false;
+      wrap.classList.remove('is-dragging');
+      if (event?.pointerId !== undefined) {
+        try {
+          wrap.releasePointerCapture?.(event.pointerId);
+        } catch {
+          // ignore browsers that already released capture
+        }
+      }
+    };
+
+    wrap.addEventListener('pointerup', stopDragging);
+    wrap.addEventListener('pointercancel', stopDragging);
+    wrap.addEventListener('pointerleave', (event) => {
+      if (event.pointerType === 'mouse') stopDragging(event);
+    });
+  });
 }
 
 function buildMedallero(rows) {
@@ -939,6 +1156,20 @@ function initMetricsSwitch() {
   });
 }
 
+function initMetricViewSwitch() {
+  const buttons = document.querySelectorAll('.metrics-view-btn');
+  const panels = document.querySelectorAll('[data-metric-panel]');
+
+  buttons.forEach((button) => {
+    button.addEventListener('click', () => {
+      const target = button.dataset.metricView;
+      buttons.forEach((node) => node.classList.remove('active'));
+      panels.forEach((panel) => panel.classList.toggle('active', panel.dataset.metricPanel === target));
+      button.classList.add('active');
+    });
+  });
+}
+
 function init() {
   allData = RECORDS.resultados;
   filtered = [...allData];
@@ -958,6 +1189,7 @@ function init() {
   renderMetrics(allData);
   initRankingSwitch();
   initMetricsSwitch();
+  initMetricViewSwitch();
   initMedalleroSwitch();
   schedulePromoPopup();
 
