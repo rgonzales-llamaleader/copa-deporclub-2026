@@ -47,7 +47,8 @@ const SESSION_PILL_LABELS = {
   'Segunda Sesion': '26 marzo',
   'Tercera Fecha': '27 marzo',
   'Tercera Sesion': '27 marzo',
-  'Cuarta Sesion': '28 marzo'
+  'Cuarta Sesion': '28 marzo',
+  'Quinta Sesion': '28 marzo'
 };
 
 const isDesktop = () => window.innerWidth >= 768;
@@ -157,7 +158,7 @@ function renderDatasetCopy(data) {
   }
 
   if (medalleroSubtitle) {
-    medalleroSubtitle.textContent = `Medallas acumuladas por atleta en todos los eventos disputados hasta el Evento ${RECORDS.meta.eventos}`;
+    medalleroSubtitle.textContent = `Medallas acumuladas por persona y equipo hasta el Evento ${RECORDS.meta.eventos}`;
   }
 }
 
