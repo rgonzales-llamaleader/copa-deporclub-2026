@@ -794,6 +794,7 @@ function buildOfficialTeamMetricData(rows) {
     && !row.dq
     && !row.ns
     && !row.nt
+    && row.teamName !== 'Unattached'
   ));
   const rankedTeams = RECORDS.rankingsOficiales.combined.map((item) => item.teamName);
   const extraTeams = [...new Set(scoringRows.map((row) => row.teamName))]
