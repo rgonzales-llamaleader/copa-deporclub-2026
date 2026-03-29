@@ -44,13 +44,15 @@ const PROMO_POPUP_COOLDOWN_MS = 2 * 60 * 60 * 1000;
 const PROMO_POPUP_STORAGE_KEY = 'deporclubPromoPopupLastShownAt';
 const INDIVIDUAL_POINTS_SCALE = [9, 7, 6, 5, 4, 3, 2, 1];
 const RELAY_POINTS_SCALE = [18, 14, 12, 10, 8, 6, 4, 2];
+const MINOR_SIMULATION_SESSIONS = new Set([4, 6]);
 const SESSION_PILL_LABELS = {
   'Primera Sesion': '25 marzo',
   'Segunda Sesion': '26 marzo',
   'Tercera Fecha': '27 marzo',
   'Tercera Sesion': '27 marzo',
   'Cuarta Sesion': '28 marzo',
-  'Quinta Sesion': '28 marzo'
+  'Quinta Sesion': '28 marzo',
+  'Sexta Sesion': '29 marzo'
 };
 
 function getSessionPillLabel(sessionName) {
@@ -625,7 +627,7 @@ function buildRankedTable(pointsMap) {
 }
 
 function buildMinorPointsSimulation(rows) {
-  const simulationRows = rows.filter((row) => row.sesion === 4);
+  const simulationRows = rows.filter((row) => MINOR_SIMULATION_SESSIONS.has(row.sesion));
   const added = {
     combined: new Map(),
     women: new Map(),
@@ -949,11 +951,11 @@ function renderHeatmap(containerId, teams, columns, matrix, hue) {
 function renderHeatmaps(rows) {
   const metricData = buildOfficialTeamMetricData(rows);
   document.getElementById('styleHeatmapNote').innerHTML = `
-    <strong>Heatmap equipo × estilo:</strong> muestra dónde se concentra el puntaje oficial de los 12 equipos líderes.
+    <strong>Heatmap equipo × estilo:</strong> muestra dónde se concentra el puntaje oficial de todos los equipos con puntaje.
     Más color significa más dominio relativo en ese estilo.
   `;
   document.getElementById('categoryHeatmapNote').innerHTML = `
-    <strong>Heatmap equipo × categoría:</strong> deja ver en qué edades están construyendo más puntaje los equipos punteros.
+    <strong>Heatmap equipo × categoría:</strong> deja ver en qué edades están construyendo más puntaje todos los equipos con puntaje.
     Está basado en el acumulado oficial actual, no en la simulación de menores.
   `;
   renderHeatmap('styleHeatmap', metricData.topTeams, metricData.activeStyles, metricData.styleMatrix, 198);
