@@ -51,6 +51,10 @@ const SESSION_PILL_LABELS = {
   'Quinta Sesion': '28 marzo'
 };
 
+function getSessionPillLabel(sessionName) {
+  return SESSION_PILL_LABELS[sessionName] || sessionName;
+}
+
 const isDesktop = () => window.innerWidth >= 768;
 
 function syncBodyScrollLock() {
@@ -140,9 +144,7 @@ function renderStats(data) {
   ).size;
   document.getElementById('statAtletas').textContent = atletasUnicos;
   document.getElementById('statEquipos').textContent = new Set(data.map((r) => r.equipo)).size;
-  document.getElementById('statCategorias').textContent = new Set(
-    data.map((r) => `${r.evento}|${r.genero}|${r.prueba}|${r.categoria}`)
-  ).size;
+  document.getElementById('statCategorias').textContent = RECORDS.meta.categorias;
   document.getElementById('statPruebas').textContent = RECORDS.meta.eventos;
   document.getElementById('headerSub').textContent = `${RECORDS.meta.fechas} · ${RECORDS.meta.sesion}`;
 }
@@ -302,14 +304,14 @@ function initCategoryPills(data) {
   const sessionPills = [...new Map(
     [...data]
       .sort((a, b) => a.sesion - b.sesion || a.evento - b.evento)
-      .map((row) => [row.sesionNombre, row.sesion])
+      .map((row) => [getSessionPillLabel(row.sesionNombre), row.sesion])
   ).entries()];
 
   const datePills = [
     { label: 'Todas', value: 'all' },
-    ...sessionPills.map(([sessionName]) => ({
-      label: SESSION_PILL_LABELS[sessionName] || sessionName,
-      value: sessionName
+    ...sessionPills.map(([sessionLabel]) => ({
+      label: sessionLabel,
+      value: sessionLabel
     }))
   ];
 
@@ -353,7 +355,7 @@ function renderPodios(data, sessionFilter = 'all', genderFilter = 'all') {
 
   const grouped = new Map();
   data.forEach((row) => {
-    if (sessionFilter !== 'all' && row.sesionNombre !== sessionFilter) return;
+    if (sessionFilter !== 'all' && getSessionPillLabel(row.sesionNombre) !== sessionFilter) return;
     if (genderFilter !== 'all' && row.genero !== genderFilter) return;
     const key = `${row.evento}|${row.genero}|${row.prueba}|${row.categoria}`;
     if (!grouped.has(key)) grouped.set(key, []);
