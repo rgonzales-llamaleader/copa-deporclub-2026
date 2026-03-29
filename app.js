@@ -42,6 +42,8 @@ let promoPopupTimer = null;
 const PROMO_POPUP_DELAY_MS = 30 * 1000;
 const PROMO_POPUP_COOLDOWN_MS = 2 * 60 * 60 * 1000;
 const PROMO_POPUP_STORAGE_KEY = 'deporclubPromoPopupLastShownAt';
+const INDIVIDUAL_POINTS_SCALE = [9, 7, 6, 5, 4, 3, 2, 1];
+const RELAY_POINTS_SCALE = [18, 14, 12, 10, 8, 6, 4, 2];
 const SESSION_PILL_LABELS = {
   'Primera Sesion': '25 marzo',
   'Segunda Sesion': '26 marzo',
@@ -67,6 +69,11 @@ function timeToSec(str) {
   if (!str || str === 'DQ' || str === 'NS' || str === 'NT' || str === '—') return Infinity;
   const parts = str.split(':');
   return parts.length === 2 ? Number(parts[0]) * 60 + Number(parts[1]) : Number(parts[0]);
+}
+
+function cleanPoints(value) {
+  const rounded = Math.round(Number(value || 0) * 10) / 10;
+  return Number.isInteger(rounded) ? rounded.toFixed(0) : rounded.toFixed(1);
 }
 
 function getRecordBadge(row) {
@@ -602,6 +609,187 @@ function renderOfficialRanking(targetId, rows) {
   });
 }
 
+function buildRankedTable(pointsMap) {
+  const sorted = [...pointsMap.entries()]
+    .map(([teamName, points]) => ({ teamName, points: Number(cleanPoints(points)) }))
+    .sort((a, b) => b.points - a.points || a.teamName.localeCompare(b.teamName, 'es'));
+
+  let lastPoints = null;
+  let lastRank = 0;
+  return sorted.map((team, index) => {
+    const rank = team.points === lastPoints ? lastRank : index + 1;
+    lastPoints = team.points;
+    lastRank = rank;
+    return { rank, ...team };
+  });
+}
+
+function buildMinorPointsSimulation(rows) {
+  const simulationRows = rows.filter((row) => row.sesion === 4);
+  const official = {
+    combined: new Map(RECORDS.rankingsOficiales.combined.map((item) => [item.teamName, Number(item.points)])),
+    women: new Map(RECORDS.rankingsOficiales.women.map((item) => [item.teamName, Number(item.points)])),
+    men: new Map(RECORDS.rankingsOficiales.men.map((item) => [item.teamName, Number(item.points)]))
+  };
+  const added = {
+    combined: new Map(),
+    women: new Map(),
+    men: new Map()
+  };
+  const grouped = new Map();
+
+  simulationRows.forEach((row) => {
+    const key = `${row.evento}|${row.genero}|${row.prueba}|${row.categoria}`;
+    if (!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key).push(row);
+  });
+
+  grouped.forEach((eventRows) => {
+    const eligible = eventRows
+      .filter((row) => !row.dq && !row.ns && !row.nt && !row.exhibition && row.pos)
+      .sort((a, b) => (a.pos || 999) - (b.pos || 999) || timeToSec(a.tiempo) - timeToSec(b.tiempo) || a.nombre.localeCompare(b.nombre, 'es'));
+
+    if (!eligible.length) return;
+
+    const scale = eligible[0].relay ? RELAY_POINTS_SCALE : INDIVIDUAL_POINTS_SCALE;
+    const tiesByPos = new Map();
+    eligible.forEach((row) => {
+      if (!tiesByPos.has(row.pos)) tiesByPos.set(row.pos, []);
+      tiesByPos.get(row.pos).push(row);
+    });
+
+    let scoreIndex = 1;
+    [...tiesByPos.entries()]
+      .sort((a, b) => a[0] - b[0])
+      .forEach(([, tiedRows]) => {
+        const covered = scale.slice(scoreIndex - 1, scoreIndex - 1 + tiedRows.length);
+        const points = covered.length
+          ? covered.reduce((sum, value) => sum + value, 0) / tiedRows.length
+          : 0;
+
+        tiedRows.forEach((row) => {
+          added.combined.set(row.teamName, (added.combined.get(row.teamName) || 0) + points);
+
+          if (row.genero === 'Damas') {
+            added.women.set(row.teamName, (added.women.get(row.teamName) || 0) + points);
+          }
+
+          if (row.genero === 'Varones') {
+            added.men.set(row.teamName, (added.men.get(row.teamName) || 0) + points);
+          }
+        });
+
+        scoreIndex += tiedRows.length;
+      });
+  });
+
+  const rankings = {};
+  ['combined', 'women', 'men'].forEach((scope) => {
+    const merged = new Map(official[scope]);
+    added[scope].forEach((points, teamName) => {
+      merged.set(teamName, (merged.get(teamName) || 0) + points);
+    });
+
+    const previousPositions = new Map(
+      buildRankedTable(official[scope]).map((team) => [team.teamName, team.rank])
+    );
+
+    rankings[scope] = buildRankedTable(merged).map((team) => {
+      const addedPoints = Number(cleanPoints(added[scope].get(team.teamName) || 0));
+      const previousRank = previousPositions.get(team.teamName) || null;
+      return {
+        ...team,
+        addedPoints,
+        previousRank,
+        rankChange: previousRank ? previousRank - team.rank : 0
+      };
+    });
+  });
+
+  const combinedImpact = rankings.combined.filter((team) => team.addedPoints > 0);
+  const topMover = combinedImpact
+    .slice()
+    .sort((a, b) => b.rankChange - a.rankChange || b.addedPoints - a.addedPoints || a.teamName.localeCompare(b.teamName, 'es'))[0] || null;
+
+  return {
+    rankings,
+    summary: {
+      totalAddedPoints: Number(cleanPoints([...added.combined.values()].reduce((sum, value) => sum + value, 0))),
+      impactedTeams: combinedImpact.length,
+      eventsSimulated: new Set(simulationRows.map((row) => row.evento)).size,
+      leader: rankings.combined[0] || null,
+      topMover
+    }
+  };
+}
+
+function renderSimulationRanking(targetId, rows) {
+  const list = document.getElementById(targetId);
+  list.innerHTML = '';
+
+  rows.forEach((team, index) => {
+    const wrapper = document.createElement('div');
+    const moveClass = team.rankChange > 0 ? 'is-up' : team.rankChange < 0 ? 'is-down' : '';
+    wrapper.className = `ranking-row metrics-row ${index === 0 ? 'rk-gold' : index === 1 ? 'rk-silver' : index === 2 ? 'rk-bronze' : ''}`;
+    wrapper.innerHTML = `
+      <div class="rk-pos">${index < 3 ? ['&#129351;', '&#129352;', '&#129353;'][index] : team.rank}</div>
+      <div class="rk-body">
+        <div class="rk-name">${team.teamName}</div>
+        <div class="rk-events">
+          <span class="metrics-delta ${moveClass}">${team.rankChange > 0 ? `Sube ${team.rankChange}` : team.rankChange < 0 ? `Baja ${Math.abs(team.rankChange)}` : 'Sin cambio'}</span>
+          · +${cleanPoints(team.addedPoints)} pts simulados
+          ${team.previousRank ? `· antes ${team.previousRank}` : ''}
+        </div>
+      </div>
+      <div class="rk-points">
+        <span class="rk-pts">${cleanPoints(team.points)}</span>
+        <span class="rk-pts-label">pts</span>
+      </div>
+    `;
+    list.appendChild(wrapper);
+  });
+}
+
+function renderMetrics(rows) {
+  const simulation = buildMinorPointsSimulation(rows);
+  const summary = simulation.summary;
+  const summaryContainer = document.getElementById('metricsSummary');
+  const note = document.getElementById('metricsNote');
+
+  summaryContainer.innerHTML = `
+    <article class="metric-card">
+      <span class="metric-label">Puntos simulados</span>
+      <strong class="metric-value">${cleanPoints(summary.totalAddedPoints)}</strong>
+      <span class="metric-copy">Puntaje total que habrían aportado los menores de la cuarta sesión.</span>
+    </article>
+    <article class="metric-card">
+      <span class="metric-label">Equipos impactados</span>
+      <strong class="metric-value">${summary.impactedTeams}</strong>
+      <span class="metric-copy">Clubes que habrían sumado al menos un punto en la simulación.</span>
+    </article>
+    <article class="metric-card">
+      <span class="metric-label">Líder simulado</span>
+      <strong class="metric-value metric-team">${summary.leader?.teamName || '—'}</strong>
+      <span class="metric-copy">${summary.leader ? `${cleanPoints(summary.leader.points)} pts en el acumulado total.` : 'Sin datos disponibles.'}</span>
+    </article>
+    <article class="metric-card">
+      <span class="metric-label">Mayor subida</span>
+      <strong class="metric-value metric-team">${summary.topMover?.teamName || '—'}</strong>
+      <span class="metric-copy">${summary.topMover ? `Sube ${summary.topMover.rankChange} puesto(s) con +${cleanPoints(summary.topMover.addedPoints)} pts.` : 'Sin cambios de posición.'}</span>
+    </article>
+  `;
+
+  note.innerHTML = `
+    <strong>Supuesto de la simulación:</strong> se aplicó la escala normal de puntaje a los eventos 37 al 53 de la cuarta sesión.
+    Individuales: 9-7-6-5-4-3-2-1. Postas: 18-14-12-10-8-6-4-2 por equipo.
+    Los empates reparten promedio y las postas siguen sumando sólo al club.
+  `;
+
+  renderSimulationRanking('metricsListCombined', simulation.rankings.combined);
+  renderSimulationRanking('metricsListWomen', simulation.rankings.women);
+  renderSimulationRanking('metricsListMen', simulation.rankings.men);
+}
+
 function buildMedallero(rows) {
   const medalists = new Map();
   const ensureEntry = (nombre, equipo, teamName, genero, entityType = 'athlete') => {
@@ -724,14 +912,28 @@ function initMedalleroSwitch() {
 }
 
 function initRankingSwitch() {
-  const buttons = document.querySelectorAll('.ranking-switch-btn');
-  const panels = document.querySelectorAll('.ranking-block');
+  const buttons = document.querySelectorAll('[data-ranking-target]');
+  const panels = document.querySelectorAll('[data-ranking-panel]');
 
   buttons.forEach((button) => {
     button.addEventListener('click', () => {
       const target = button.dataset.rankingTarget;
       buttons.forEach((node) => node.classList.remove('active'));
       panels.forEach((panel) => panel.classList.toggle('active', panel.dataset.rankingPanel === target));
+      button.classList.add('active');
+    });
+  });
+}
+
+function initMetricsSwitch() {
+  const buttons = document.querySelectorAll('.metrics-switch-btn');
+  const panels = document.querySelectorAll('.metrics-block');
+
+  buttons.forEach((button) => {
+    button.addEventListener('click', () => {
+      const target = button.dataset.metricsTarget;
+      buttons.forEach((node) => node.classList.remove('active'));
+      panels.forEach((panel) => panel.classList.toggle('active', panel.dataset.metricsPanel === target));
       button.classList.add('active');
     });
   });
@@ -753,7 +955,9 @@ function init() {
   renderOfficialRanking('rankingListWomen', RECORDS.rankingsOficiales.women);
   renderOfficialRanking('rankingListMen', RECORDS.rankingsOficiales.men);
   renderMedallero(allData);
+  renderMetrics(allData);
   initRankingSwitch();
+  initMetricsSwitch();
   initMedalleroSwitch();
   schedulePromoPopup();
 

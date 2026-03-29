@@ -60,6 +60,9 @@
   <button class="tab-btn" data-tab="medallero">
     <span class="tab-icon">🥇</span> Medallero
   </button>
+  <button class="tab-btn" data-tab="metricas">
+    <span class="tab-icon">📈</span> Métricas
+  </button>
   <button class="tab-btn" data-tab="resultados">
     <span class="tab-icon">📋</span> Resultados
   </button>
@@ -131,6 +134,33 @@
     <span id="medalleroInfo"></span>
   </div>
   <div class="medallero-list" id="medalleroList"></div>
+</div>
+
+<div id="metricas" class="tab-content">
+  <div class="ranking-header">
+    <p class="ranking-subtitle" id="metricsSubtitle">Simulación del ranking si los menores de la cuarta sesión también hubieran puntuado</p>
+  </div>
+  <div class="metrics-grid" id="metricsSummary"></div>
+  <div class="metrics-note" id="metricsNote"></div>
+  <div class="ranking-switch metrics-switch" id="metricsSwitch">
+    <button class="ranking-switch-btn active metrics-switch-btn" data-metrics-target="combined">Puntaje total</button>
+    <button class="ranking-switch-btn metrics-switch-btn" data-metrics-target="women">Mujeres</button>
+    <button class="ranking-switch-btn metrics-switch-btn" data-metrics-target="men">Hombres</button>
+  </div>
+  <div class="ranking-sections metrics-sections">
+    <section class="ranking-block metrics-block active" data-metrics-panel="combined">
+      <h3>Ranking simulado total</h3>
+      <div id="metricsListCombined"></div>
+    </section>
+    <section class="ranking-block metrics-block" data-metrics-panel="women">
+      <h3>Ranking simulado mujeres</h3>
+      <div id="metricsListWomen"></div>
+    </section>
+    <section class="ranking-block metrics-block" data-metrics-panel="men">
+      <h3>Ranking simulado hombres</h3>
+      <div id="metricsListMen"></div>
+    </section>
+  </div>
 </div>
 
 <div id="resultados" class="tab-content">
