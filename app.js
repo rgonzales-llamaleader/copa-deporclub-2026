@@ -36,8 +36,10 @@ let activePodioSesion = 'all';
 let activePodioGenero = 'all';
 let activeMedalBuscar = '';
 let activeMedalleroType = 'all';
+let activeRankingType = 'team';
 let expandedRelayResults = new Set();
 let promoPopupTimer = null;
+let rankingViews = null;
 
 const PROMO_POPUP_DELAY_MS = 30 * 1000;
 const PROMO_POPUP_COOLDOWN_MS = 2 * 60 * 60 * 1000;
@@ -161,16 +163,41 @@ function renderStats(data) {
 function renderDatasetCopy(data) {
   const rankingSubtitle = document.getElementById('rankingSubtitle');
   const medalleroSubtitle = document.getElementById('medalleroSubtitle');
-  const corte = RECORDS.validacion?.provisional ? 'Corte preliminar' : 'Acumulado oficial';
-  const officialUntilEvent = RECORDS.validacion?.officialUntilEvent || RECORDS.meta.eventos;
-
-  if (rankingSubtitle) {
-    rankingSubtitle.textContent = `${corte} hasta el Evento ${officialUntilEvent} · ${data.length} resultados procesados`;
-  }
+  updateRankingCopy(data.length);
 
   if (medalleroSubtitle) {
     medalleroSubtitle.textContent = `Medallas acumuladas por persona y equipo hasta el Evento ${RECORDS.meta.eventos}`;
   }
+}
+
+function updateRankingCopy(processedRows = allData.length) {
+  const rankingSubtitle = document.getElementById('rankingSubtitle');
+  const officialUntilEvent = RECORDS.validacion?.officialUntilEvent || RECORDS.meta.eventos;
+  const corte = RECORDS.validacion?.provisional ? 'Corte preliminar' : 'Acumulado oficial';
+
+  if (!rankingSubtitle) return;
+
+  rankingSubtitle.textContent = activeRankingType === 'team'
+    ? `${corte} por equipos hasta el Evento ${officialUntilEvent} · ${processedRows} resultados procesados`
+    : `${corte} por personas hasta el Evento ${officialUntilEvent} · las postas no suman puntos individuales`;
+}
+
+function updateRankingHeadings() {
+  const labels = activeRankingType === 'team'
+    ? {
+        combined: 'Acumulado general por equipos',
+        women: 'Acumulado mujeres por equipos',
+        men: 'Acumulado hombres por equipos'
+      }
+    : {
+        combined: 'Acumulado general por personas',
+        women: 'Acumulado mujeres por personas',
+        men: 'Acumulado hombres por personas'
+      };
+
+  document.getElementById('rankingHeadingCombined').textContent = labels.combined;
+  document.getElementById('rankingHeadingWomen').textContent = labels.women;
+  document.getElementById('rankingHeadingMen').textContent = labels.men;
 }
 
 function initTabs() {
@@ -591,19 +618,24 @@ function scrollToTop() {
   document.getElementById('resultados').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-function renderOfficialRanking(targetId, rows) {
+function renderRankingList(targetId, rows, mode = 'team') {
   const list = document.getElementById(targetId);
   list.innerHTML = '';
-  rows.forEach((team, index) => {
+  rows.forEach((entry, index) => {
     const wrapper = document.createElement('div');
     wrapper.className = `ranking-row ${index === 0 ? 'rk-gold' : index === 1 ? 'rk-silver' : index === 2 ? 'rk-bronze' : ''}`;
+    const title = mode === 'team' ? entry.teamName : entry.nombre;
+    const meta = mode === 'athlete' && entry.teamName
+      ? `<div class="rk-events">${entry.teamName}</div>`
+      : '';
     wrapper.innerHTML = `
-      <div class="rk-pos">${index < 3 ? ['&#129351;', '&#129352;', '&#129353;'][index] : team.rank}</div>
+      <div class="rk-pos">${index < 3 ? ['&#129351;', '&#129352;', '&#129353;'][index] : entry.rank}</div>
       <div class="rk-body">
-        <div class="rk-name">${team.teamName}</div>
+        <div class="rk-name">${title}</div>
+        ${meta}
       </div>
       <div class="rk-points">
-        <span class="rk-pts">${team.points}</span>
+        <span class="rk-pts">${entry.points}</span>
         <span class="rk-pts-label">pts</span>
       </div>
     `;
@@ -624,6 +656,71 @@ function buildRankedTable(pointsMap) {
     lastRank = rank;
     return { rank, ...team };
   });
+}
+
+function buildAthleteRankingData(rows) {
+  const officialUntilEvent = RECORDS.validacion?.officialUntilEvent || RECORDS.meta.eventos;
+  const buckets = {
+    combined: new Map(),
+    women: new Map(),
+    men: new Map()
+  };
+
+  const ensureAthlete = (scope, nombre, teamName) => {
+    if (!buckets[scope].has(nombre)) {
+      buckets[scope].set(nombre, { nombre, teamName, points: 0 });
+    }
+    return buckets[scope].get(nombre);
+  };
+
+  rows
+    .filter((row) => (
+      row.evento <= officialUntilEvent
+      && !row.relay
+      && Number(row.puntosOficiales || row.puntos || 0) > 0
+      && !row.exhibition
+      && !row.dq
+      && !row.ns
+      && !row.nt
+    ))
+    .forEach((row) => {
+      const points = Number(row.puntosOficiales || row.puntos || 0);
+      ensureAthlete('combined', row.nombre, row.teamName).points += points;
+      if (row.genero === 'Damas') ensureAthlete('women', row.nombre, row.teamName).points += points;
+      if (row.genero === 'Varones') ensureAthlete('men', row.nombre, row.teamName).points += points;
+    });
+
+  const rankEntries = (items) => {
+    const sorted = [...items.values()]
+      .map((item) => ({ ...item, points: Number(cleanPoints(item.points)) }))
+      .sort((a, b) => b.points - a.points || a.nombre.localeCompare(b.nombre, 'es'));
+
+    let lastPoints = null;
+    let lastRank = 0;
+    return sorted.map((item, index) => {
+      const rank = item.points === lastPoints ? lastRank : index + 1;
+      lastPoints = item.points;
+      lastRank = rank;
+      return { rank, ...item };
+    });
+  };
+
+  return {
+    combined: rankEntries(buckets.combined),
+    women: rankEntries(buckets.women),
+    men: rankEntries(buckets.men)
+  };
+}
+
+function syncRankingView(processedRows = allData.length) {
+  if (!rankingViews) return;
+
+  const current = rankingViews[activeRankingType];
+  renderRankingList('rankingListCombined', current.combined, activeRankingType);
+  renderRankingList('rankingListWomen', current.women, activeRankingType);
+  renderRankingList('rankingListMen', current.men, activeRankingType);
+  updateRankingHeadings();
+  updateRankingCopy(processedRows);
 }
 
 function buildMinorPointsSimulation(rows) {
@@ -1145,6 +1242,18 @@ function initRankingSwitch() {
   });
 }
 
+function initRankingTypeSwitch() {
+  const buttons = document.querySelectorAll('[data-ranking-type]');
+  buttons.forEach((button) => {
+    button.addEventListener('click', () => {
+      activeRankingType = button.dataset.rankingType;
+      buttons.forEach((node) => node.classList.remove('active'));
+      button.classList.add('active');
+      syncRankingView();
+    });
+  });
+}
+
 function initMetricsSwitch() {
   const buttons = document.querySelectorAll('.metrics-switch-btn');
   const panels = document.querySelectorAll('.metrics-block');
@@ -1176,6 +1285,14 @@ function initMetricViewSwitch() {
 function init() {
   allData = RECORDS.resultados;
   filtered = [...allData];
+  rankingViews = {
+    team: {
+      combined: RECORDS.rankingsOficiales.combined,
+      women: RECORDS.rankingsOficiales.women,
+      men: RECORDS.rankingsOficiales.men
+    },
+    athlete: buildAthleteRankingData(allData)
+  };
 
   renderStats(allData);
   renderDatasetCopy(allData);
@@ -1185,12 +1302,11 @@ function init() {
   renderPodios(allData);
   renderResults();
   updateResultsInfo();
-  renderOfficialRanking('rankingListCombined', RECORDS.rankingsOficiales.combined);
-  renderOfficialRanking('rankingListWomen', RECORDS.rankingsOficiales.women);
-  renderOfficialRanking('rankingListMen', RECORDS.rankingsOficiales.men);
+  syncRankingView(allData.length);
   renderMedallero(allData);
   renderMetrics(allData);
   initRankingSwitch();
+  initRankingTypeSwitch();
   initMetricsSwitch();
   initMetricViewSwitch();
   initMedalleroSwitch();

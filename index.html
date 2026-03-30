@@ -86,6 +86,10 @@
   <div class="ranking-header">
     <p class="ranking-subtitle" id="rankingSubtitle">Acumulado oficial vigente hasta el Evento 77</p>
   </div>
+  <div class="ranking-switch" id="rankingTypeSwitch">
+    <button class="ranking-switch-btn active" data-ranking-type="team">Equipos</button>
+    <button class="ranking-switch-btn" data-ranking-type="athlete">Personas</button>
+  </div>
   <div class="ranking-switch" id="rankingSwitch">
     <button class="ranking-switch-btn active" data-ranking-target="combined">Puntaje total</button>
     <button class="ranking-switch-btn" data-ranking-target="women">Mujeres</button>
@@ -93,15 +97,15 @@
   </div>
   <div class="ranking-sections">
     <section class="ranking-block active" data-ranking-panel="combined">
-      <h3>Acumulado general</h3>
+      <h3 id="rankingHeadingCombined">Acumulado general por equipos</h3>
       <div id="rankingListCombined"></div>
     </section>
     <section class="ranking-block" data-ranking-panel="women">
-      <h3>Acumulado mujeres</h3>
+      <h3 id="rankingHeadingWomen">Acumulado mujeres por equipos</h3>
       <div id="rankingListWomen"></div>
     </section>
     <section class="ranking-block" data-ranking-panel="men">
-      <h3>Acumulado hombres</h3>
+      <h3 id="rankingHeadingMen">Acumulado hombres por equipos</h3>
       <div id="rankingListMen"></div>
     </section>
   </div>
