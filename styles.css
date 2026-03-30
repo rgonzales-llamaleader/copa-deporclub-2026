@@ -1637,6 +1637,38 @@ footer a {
   gap: 1rem;
 }
 
+.metrics-filters {
+  display: grid;
+  grid-template-columns: minmax(0, 220px) minmax(0, 1fr);
+  gap: .85rem;
+  align-items: end;
+  margin-bottom: 1rem;
+}
+
+.metrics-filter-field {
+  display: grid;
+  gap: .4rem;
+}
+
+.metrics-filter-field label {
+  font-size: .72rem;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  font-weight: 800;
+  color: var(--muted);
+}
+
+.metrics-select {
+  width: 100%;
+  border: 2px solid var(--border);
+  background: var(--surface);
+  color: var(--navy);
+  border-radius: 16px;
+  padding: .75rem .9rem;
+  font-size: .92rem;
+  font-weight: 700;
+}
+
 .metrics-panel {
   display: grid;
   gap: .75rem;
@@ -1650,6 +1682,15 @@ footer a {
 
 .metric-card-style {
   min-height: 124px;
+}
+
+.metric-card-active {
+  border-color: rgba(0, 119, 182, .35);
+  box-shadow: 0 14px 28px rgba(0, 119, 182, .14);
+}
+
+#categoryDominanceSummary .metric-card {
+  cursor: pointer;
 }
 
 .metric-style-card {
@@ -1689,6 +1730,10 @@ footer a {
 .metric-style-list {
   display: grid;
   gap: .5rem;
+}
+
+.metrics-grid-compact {
+  margin-bottom: 0;
 }
 
 .metrics-row {
@@ -1851,6 +1896,10 @@ footer a {
 
 @media (max-width: 767px) {
   .metrics-dual {
+    grid-template-columns: 1fr;
+  }
+
+  .metrics-filters {
     grid-template-columns: 1fr;
   }
 

@@ -147,6 +147,7 @@
   <div class="ranking-switch metrics-view-switch" id="metricsViewSwitch">
     <button class="ranking-switch-btn active metrics-view-btn" data-metric-view="simulation">Simulacion Menores</button>
     <button class="ranking-switch-btn metrics-view-btn" data-metric-view="dominance">Dominancia por estilos</button>
+    <button class="ranking-switch-btn metrics-view-btn" data-metric-view="category-dominance">Dominancia por categorias</button>
   </div>
 
   <section class="metrics-view active" data-metric-panel="simulation">
@@ -184,6 +185,32 @@
       <div class="metrics-panel">
         <h3>Estilo dominante por equipo</h3>
         <div id="teamStyleProfileList"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="metrics-view" data-metric-panel="category-dominance">
+    <div class="metrics-grid" id="categoryDominanceSummary"></div>
+    <div class="metrics-note" id="categoryDominanceNote"></div>
+    <div class="metrics-filters">
+      <div class="metrics-filter-field">
+        <label for="categoryDominanceFilter">Categoria</label>
+        <select id="categoryDominanceFilter" class="metrics-select"></select>
+      </div>
+      <div class="ranking-switch" id="categoryDominanceScopeSwitch">
+        <button class="ranking-switch-btn active category-scope-btn" data-category-scope="combined">General</button>
+        <button class="ranking-switch-btn category-scope-btn" data-category-scope="women">Mujeres</button>
+        <button class="ranking-switch-btn category-scope-btn" data-category-scope="men">Hombres</button>
+      </div>
+    </div>
+    <div class="metrics-dual">
+      <div class="metrics-panel">
+        <h3 id="categoryDominanceListTitle">Ranking de equipos por categoria</h3>
+        <div id="categoryDominanceList"></div>
+      </div>
+      <div class="metrics-panel">
+        <h3 id="categoryDominanceDetailTitle">Detalle del lider</h3>
+        <div id="categoryDominanceDetail"></div>
       </div>
     </div>
   </section>

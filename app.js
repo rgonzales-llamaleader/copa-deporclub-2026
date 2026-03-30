@@ -37,9 +37,12 @@ let activePodioGenero = 'all';
 let activeMedalBuscar = '';
 let activeMedalleroType = 'all';
 let activeRankingType = 'team';
+let activeCategoryDominanceScope = 'combined';
+let activeCategoryDominanceFilter = '';
 let expandedRelayResults = new Set();
 let promoPopupTimer = null;
 let rankingViews = null;
+let categoryDominanceData = null;
 
 const PROMO_POPUP_DELAY_MS = 30 * 1000;
 const PROMO_POPUP_COOLDOWN_MS = 2 * 60 * 60 * 1000;
@@ -856,7 +859,7 @@ function renderMetrics(rows) {
   `;
 
   note.innerHTML = `
-    <strong>Supuesto de la simulacion:</strong> esta vista trata a la cuarta sesion como si fuera un campeonato separado de menores.
+    <strong>Supuesto de la simulacion:</strong> esta vista trata a la cuarta y sexta sesion como si fueran un campeonato separado de menores.
     No se mezcla con el ranking oficial del meet. Individuales: 9-7-6-5-4-3-2-1. Postas: 18-14-12-10-8-6-4-2 por equipo.
     Los empates reparten promedio y las postas siguen sumando solo al club.
   `;
@@ -865,6 +868,8 @@ function renderMetrics(rows) {
   renderSimulationRanking('metricsListWomen', simulation.rankings.women);
   renderSimulationRanking('metricsListMen', simulation.rankings.men);
   renderStyleMetrics(rows);
+  categoryDominanceData = buildCategoryDominanceData(rows);
+  renderCategoryDominance();
   renderHeatmaps(rows);
 }
 
@@ -1008,6 +1013,170 @@ function renderStyleMetrics(rows) {
       </div>
     </div>
   `).join('');
+}
+
+function buildCategoryDominanceData(rows) {
+  const scoringRows = rows.filter((row) => (
+    Number(row.puntosOficiales || row.puntos || 0) > 0
+    && !row.exhibition
+    && !row.dq
+    && !row.ns
+    && !row.nt
+    && row.teamName !== 'Unattached'
+  ));
+  const categories = [...new Set(scoringRows.map((row) => row.categoria))]
+    .sort((a, b) => getCategoryOrderLabel(a) - getCategoryOrderLabel(b) || a.localeCompare(b, 'es'));
+  const scopes = {
+    combined: () => true,
+    women: (row) => row.genero === 'Damas',
+    men: (row) => row.genero === 'Varones'
+  };
+  const data = { categories, scopes: {} };
+
+  Object.entries(scopes).forEach(([scope, predicate]) => {
+    const categoryPoints = new Map();
+    const categoryStyle = new Map();
+
+    scoringRows.filter(predicate).forEach((row) => {
+      const category = row.categoria;
+      const teamName = row.teamName;
+      const points = Number(row.puntosOficiales || row.puntos || 0);
+      const style = getMetricStyle(row);
+
+      if (!categoryPoints.has(category)) categoryPoints.set(category, new Map());
+      categoryPoints.get(category).set(teamName, (categoryPoints.get(category).get(teamName) || 0) + points);
+
+      const styleKey = `${category}|${teamName}`;
+      if (!categoryStyle.has(styleKey)) categoryStyle.set(styleKey, new Map());
+      categoryStyle.get(styleKey).set(style, (categoryStyle.get(styleKey).get(style) || 0) + points);
+    });
+
+    const leaders = categories.map((category) => {
+      const ranking = buildRankedTable(categoryPoints.get(category) || new Map());
+      return {
+        category,
+        ranking,
+        leader: ranking[0] || null,
+        runnerUp: ranking[1] || null,
+        totalPoints: Number(cleanPoints(ranking.reduce((sum, team) => sum + team.points, 0))),
+        teamsWithPoints: ranking.length
+      };
+    }).filter((entry) => entry.leader);
+
+    data.scopes[scope] = {
+      leaders,
+      categoryPoints,
+      categoryStyle
+    };
+  });
+
+  return data;
+}
+
+function renderCategoryDominance() {
+  if (!categoryDominanceData) return;
+
+  const scopeLabels = {
+    combined: 'general',
+    women: 'mujeres',
+    men: 'hombres'
+  };
+  const currentScope = categoryDominanceData.scopes[activeCategoryDominanceScope];
+  const categories = categoryDominanceData.categories;
+
+  if (!activeCategoryDominanceFilter || !categories.includes(activeCategoryDominanceFilter)) {
+    activeCategoryDominanceFilter = categories[0] || '';
+  }
+
+  const selected = currentScope.leaders.find((entry) => entry.category === activeCategoryDominanceFilter) || currentScope.leaders[0];
+  const summary = document.getElementById('categoryDominanceSummary');
+  const note = document.getElementById('categoryDominanceNote');
+  const list = document.getElementById('categoryDominanceList');
+  const detail = document.getElementById('categoryDominanceDetail');
+  const listTitle = document.getElementById('categoryDominanceListTitle');
+  const detailTitle = document.getElementById('categoryDominanceDetailTitle');
+
+  summary.innerHTML = currentScope.leaders.map((entry) => `
+    <article class="metric-card metric-card-style ${entry.category === activeCategoryDominanceFilter ? 'metric-card-active' : ''}" data-category-card="${entry.category}">
+      <span class="metric-label">${entry.category}</span>
+      <strong class="metric-value metric-team">${entry.leader.teamName}</strong>
+      <span class="metric-copy">${cleanPoints(entry.leader.points)} pts${entry.runnerUp ? ` · margen ${cleanPoints(entry.leader.points - entry.runnerUp.points)}` : ''}</span>
+    </article>
+  `).join('');
+
+  summary.querySelectorAll('[data-category-card]').forEach((card) => {
+    card.addEventListener('click', () => {
+      activeCategoryDominanceFilter = card.dataset.categoryCard;
+      const select = document.getElementById('categoryDominanceFilter');
+      if (select) select.value = activeCategoryDominanceFilter;
+      renderCategoryDominance();
+    });
+  });
+
+  note.innerHTML = `
+    <strong>Base del análisis:</strong> puntaje oficial acumulado por equipo hasta el Evento ${RECORDS.validacion.officialUntilEvent}.
+    Usa el filtro para cambiar la categoría y la rama, y ver qué clubes concentran mejor su puntaje en ese tramo de edades.
+  `;
+
+  if (!selected) {
+    list.innerHTML = '<div class="metrics-note">No hay datos oficiales disponibles para esta combinación.</div>';
+    detail.innerHTML = '';
+    return;
+  }
+
+  listTitle.textContent = `Ranking de equipos en ${selected.category}`;
+  detailTitle.textContent = `Detalle del lider en ${selected.category}`;
+
+  list.innerHTML = selected.ranking.map((team, index) => `
+    <div class="ranking-row metrics-row ${index === 0 ? 'rk-gold' : index === 1 ? 'rk-silver' : index === 2 ? 'rk-bronze' : ''}">
+      <div class="rk-pos">${team.rank}</div>
+      <div class="rk-body">
+        <div class="rk-name">${team.teamName}</div>
+        <div class="rk-events">${cleanPoints(team.points)} pts · ${selected.totalPoints ? cleanPoints((team.points / selected.totalPoints) * 100) : 0}% del total de la categoría</div>
+      </div>
+      <div class="rk-points">
+        <span class="rk-pts">${cleanPoints(team.points)}</span>
+        <span class="rk-pts-label">pts</span>
+      </div>
+    </div>
+  `).join('');
+
+  const leaderStyleMap = currentScope.categoryStyle.get(`${selected.category}|${selected.leader.teamName}`) || new Map();
+  const leaderStyles = [...leaderStyleMap.entries()]
+    .map(([style, points]) => ({ style, points: Number(cleanPoints(points)) }))
+    .sort((a, b) => b.points - a.points || a.style.localeCompare(b.style, 'es'));
+
+  detail.innerHTML = `
+    <div class="metric-style-card">
+      <div class="metric-style-head">
+        <span class="metric-style-name">${selected.leader.teamName}</span>
+        <span class="metric-style-badge">${scopeLabels[activeCategoryDominanceScope]}</span>
+      </div>
+      <div class="metrics-grid metrics-grid-compact">
+        <article class="metric-card">
+          <span class="metric-label">Puntos del lider</span>
+          <strong class="metric-value">${cleanPoints(selected.leader.points)}</strong>
+          <span class="metric-copy">Sobre ${cleanPoints(selected.totalPoints)} pts repartidos en ${selected.category}.</span>
+        </article>
+        <article class="metric-card">
+          <span class="metric-label">Equipos con puntos</span>
+          <strong class="metric-value">${selected.teamsWithPoints}</strong>
+          <span class="metric-copy">Clubes que puntuaron en esta categoría.</span>
+        </article>
+      </div>
+      <div class="metric-style-list">
+        ${leaderStyles.length ? leaderStyles.map((item, index) => `
+          <div class="ranking-row metrics-row">
+            <div class="rk-pos">${index + 1}</div>
+            <div class="rk-body">
+              <div class="rk-name">${item.style}</div>
+              <div class="rk-events">${cleanPoints(item.points)} pts dentro de ${selected.category}</div>
+            </div>
+          </div>
+        `).join('') : '<div class="metrics-note">No hay desglose adicional disponible para este líder.</div>'}
+      </div>
+    </div>
+  `;
 }
 
 function getHeatmapCellStyle(value, maxValue, hue) {
@@ -1282,6 +1451,36 @@ function initMetricViewSwitch() {
   });
 }
 
+function initCategoryDominanceControls() {
+  const select = document.getElementById('categoryDominanceFilter');
+  const buttons = document.querySelectorAll('.category-scope-btn');
+
+  if (select) {
+    const categories = categoryDominanceData?.categories || [];
+    select.innerHTML = categories.map((category) => `<option value="${category}">${category}</option>`).join('');
+    if (activeCategoryDominanceFilter && categories.includes(activeCategoryDominanceFilter)) {
+      select.value = activeCategoryDominanceFilter;
+    } else if (categories.length) {
+      activeCategoryDominanceFilter = categories[0];
+      select.value = activeCategoryDominanceFilter;
+    }
+
+    select.addEventListener('change', (event) => {
+      activeCategoryDominanceFilter = event.target.value;
+      renderCategoryDominance();
+    });
+  }
+
+  buttons.forEach((button) => {
+    button.addEventListener('click', () => {
+      activeCategoryDominanceScope = button.dataset.categoryScope;
+      buttons.forEach((node) => node.classList.remove('active'));
+      button.classList.add('active');
+      renderCategoryDominance();
+    });
+  });
+}
+
 function init() {
   allData = RECORDS.resultados;
   filtered = [...allData];
@@ -1309,6 +1508,7 @@ function init() {
   initRankingTypeSwitch();
   initMetricsSwitch();
   initMetricViewSwitch();
+  initCategoryDominanceControls();
   initMedalleroSwitch();
   schedulePromoPopup();
 
