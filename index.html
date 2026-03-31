@@ -175,23 +175,29 @@
   </section>
 
   <section class="metrics-view" data-metric-panel="dominance">
+    <div class="ranking-switch" id="styleDominanceTypeSwitch">
+      <button class="ranking-switch-btn active style-type-btn" data-style-type="team">Equipos</button>
+      <button class="ranking-switch-btn style-type-btn" data-style-type="athlete">Personas</button>
+    </div>
     <div class="metrics-grid" id="styleLeadersSummary"></div>
     <div class="metrics-note" id="styleDominanceNote"></div>
     <div class="metrics-dual">
       <div class="metrics-panel">
-        <h3>Líder por estilo</h3>
+        <h3 id="styleDominanceListTitle">Líder por estilo</h3>
         <div id="styleDominanceList"></div>
       </div>
       <div class="metrics-panel">
-        <h3>Estilo dominante por equipo</h3>
+        <h3 id="styleProfileListTitle">Estilo dominante por equipo</h3>
         <div id="teamStyleProfileList"></div>
       </div>
     </div>
   </section>
 
   <section class="metrics-view" data-metric-panel="category-dominance">
-    <div class="metrics-grid" id="categoryDominanceSummary"></div>
-    <div class="metrics-note" id="categoryDominanceNote"></div>
+    <div class="ranking-switch" id="categoryDominanceTypeSwitch">
+      <button class="ranking-switch-btn active category-type-btn" data-category-type="team">Equipos</button>
+      <button class="ranking-switch-btn category-type-btn" data-category-type="athlete">Personas</button>
+    </div>
     <div class="metrics-filters">
       <div class="metrics-filter-field">
         <label for="categoryDominanceFilter">Categoria</label>
@@ -203,6 +209,8 @@
         <button class="ranking-switch-btn category-scope-btn" data-category-scope="men">Hombres</button>
       </div>
     </div>
+    <div class="metrics-grid" id="categoryDominanceSummary"></div>
+    <div class="metrics-note" id="categoryDominanceNote"></div>
     <div class="metrics-dual">
       <div class="metrics-panel">
         <h3 id="categoryDominanceListTitle">Ranking de equipos por categoria</h3>

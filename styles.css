@@ -1622,6 +1622,10 @@ footer a {
   border-radius: var(--radius-sm);
 }
 
+.metrics-note-inline {
+  margin-bottom: 0;
+}
+
 .metrics-view {
   display: none;
   min-width: 0;
@@ -1690,6 +1694,10 @@ footer a {
 }
 
 #categoryDominanceSummary .metric-card {
+  cursor: pointer;
+}
+
+#styleLeadersSummary .metric-card {
   cursor: pointer;
 }
 

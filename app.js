@@ -37,11 +37,15 @@ let activePodioGenero = 'all';
 let activeMedalBuscar = '';
 let activeMedalleroType = 'all';
 let activeRankingType = 'team';
+let activeStyleDominanceType = 'team';
+let activeStyleDominanceFilter = '';
 let activeCategoryDominanceScope = 'combined';
 let activeCategoryDominanceFilter = '';
+let activeCategoryDominanceType = 'team';
 let expandedRelayResults = new Set();
 let promoPopupTimer = null;
 let rankingViews = null;
+let styleDominanceData = null;
 let categoryDominanceData = null;
 
 const PROMO_POPUP_DELAY_MS = 30 * 1000;
@@ -867,7 +871,8 @@ function renderMetrics(rows) {
   renderSimulationRanking('metricsListCombined', simulation.rankings.combined);
   renderSimulationRanking('metricsListWomen', simulation.rankings.women);
   renderSimulationRanking('metricsListMen', simulation.rankings.men);
-  renderStyleMetrics(rows);
+  styleDominanceData = buildStyleDominanceData(rows);
+  renderStyleMetrics();
   categoryDominanceData = buildCategoryDominanceData(rows);
   renderCategoryDominance();
   renderHeatmaps(rows);
@@ -960,63 +965,8 @@ function buildOfficialTeamMetricData(rows) {
   };
 }
 
-function renderStyleMetrics(rows) {
-  const metricData = buildOfficialTeamMetricData(rows);
-  const summary = document.getElementById('styleLeadersSummary');
-  const note = document.getElementById('styleDominanceNote');
-  const leadersList = document.getElementById('styleDominanceList');
-  const profilesList = document.getElementById('teamStyleProfileList');
-
-  summary.innerHTML = metricData.styleLeaders.map((entry) => `
-    <article class="metric-card metric-card-style">
-      <span class="metric-label">${entry.style}</span>
-      <strong class="metric-value metric-team">${entry.leader.teamName}</strong>
-      <span class="metric-copy">${cleanPoints(entry.leader.points)} pts${entry.runnerUp ? ` · margen ${cleanPoints(entry.leader.points - entry.runnerUp.points)}` : ''}</span>
-    </article>
-  `).join('');
-
-  note.innerHTML = `
-    <strong>Base del análisis:</strong> puntaje oficial acumulado por equipo hasta el Evento ${RECORDS.validacion.officialUntilEvent}.
-    La dominancia se calcula por puntos en cada estilo y el perfil de equipo muestra en qué estilo concentra más rendimiento.
-  `;
-
-  leadersList.innerHTML = metricData.styleLeaders.map((entry) => `
-    <div class="metric-style-card">
-      <div class="metric-style-head">
-        <span class="metric-style-name">${entry.style}</span>
-        <span class="metric-style-badge">${entry.ranking.length} equipos con puntos</span>
-      </div>
-      <div class="metric-style-list">
-        ${entry.ranking.slice(0, 5).map((team, index) => `
-          <div class="ranking-row metrics-row">
-            <div class="rk-pos">${index + 1}</div>
-            <div class="rk-body">
-              <div class="rk-name">${team.teamName}</div>
-              <div class="rk-events">${cleanPoints(team.points)} pts en ${entry.style}</div>
-            </div>
-          </div>
-        `).join('')}
-      </div>
-    </div>
-  `).join('');
-
-  profilesList.innerHTML = metricData.teamProfiles.map((team, index) => `
-    <div class="ranking-row metrics-row ${index === 0 ? 'rk-gold' : index === 1 ? 'rk-silver' : index === 2 ? 'rk-bronze' : ''}">
-      <div class="rk-pos">${index + 1}</div>
-      <div class="rk-body">
-        <div class="rk-name">${team.teamName}</div>
-        <div class="rk-events">${team.dominantStyle} · ${cleanPoints(team.dominantPoints)} pts · ${cleanPoints(team.share)}% de su puntaje</div>
-      </div>
-      <div class="rk-points">
-        <span class="rk-pts">${cleanPoints(team.total)}</span>
-        <span class="rk-pts-label">pts</span>
-      </div>
-    </div>
-  `).join('');
-}
-
-function buildCategoryDominanceData(rows) {
-  const scoringRows = rows.filter((row) => (
+function buildStyleDominanceData(rows) {
+  const teamRows = rows.filter((row) => (
     Number(row.puntosOficiales || row.puntos || 0) > 0
     && !row.exhibition
     && !row.dq
@@ -1024,53 +974,287 @@ function buildCategoryDominanceData(rows) {
     && !row.nt
     && row.teamName !== 'Unattached'
   ));
-  const categories = [...new Set(scoringRows.map((row) => row.categoria))]
+  const athleteRows = teamRows.filter((row) => !row.relay);
+  const styleOrder = ['Libre', 'Espalda', 'Pecho', 'Mariposa', 'Combinado', 'Relevos', 'Otros'];
+
+  const buildTypeData = (mode, sourceRows) => {
+    const totalsMap = new Map();
+    const breakdownMap = new Map();
+
+    sourceRows.forEach((row) => {
+      const style = getMetricStyle(row);
+      const points = Number(row.puntosOficiales || row.puntos || 0);
+      const entityKey = mode === 'team' ? row.teamName : row.nombre;
+      const breakdownKey = mode === 'team' ? row.categoria : row.prueba;
+
+      if (!totalsMap.has(entityKey)) {
+        totalsMap.set(entityKey, mode === 'team'
+          ? { teamName: row.teamName, totals: new Map() }
+          : { nombre: row.nombre, teamName: row.teamName, totals: new Map() });
+      }
+      totalsMap.get(entityKey).totals.set(style, (totalsMap.get(entityKey).totals.get(style) || 0) + points);
+
+      const detailMapKey = `${entityKey}|${style}`;
+      if (!breakdownMap.has(detailMapKey)) breakdownMap.set(detailMapKey, new Map());
+      breakdownMap.get(detailMapKey).set(breakdownKey, (breakdownMap.get(detailMapKey).get(breakdownKey) || 0) + points);
+    });
+
+    const activeStyles = styleOrder.filter((style) => [...totalsMap.values()].some((entry) => (entry.totals.get(style) || 0) > 0));
+    const styleLeaders = activeStyles.map((style) => {
+      const ranking = [...totalsMap.values()]
+        .map((entry) => ({
+          ...(mode === 'team' ? { teamName: entry.teamName } : { nombre: entry.nombre, teamName: entry.teamName }),
+          points: Number(cleanPoints(entry.totals.get(style) || 0))
+        }))
+        .filter((entry) => entry.points > 0)
+        .sort((a, b) => {
+          const labelA = mode === 'team' ? a.teamName : a.nombre;
+          const labelB = mode === 'team' ? b.teamName : b.nombre;
+          return b.points - a.points || labelA.localeCompare(labelB, 'es');
+        });
+      return {
+        style,
+        ranking,
+        leader: ranking[0] || null,
+        runnerUp: ranking[1] || null
+      };
+    }).filter((entry) => entry.leader);
+
+    const profiles = [...totalsMap.values()].map((entry) => {
+      const total = activeStyles.reduce((sum, style) => sum + (entry.totals.get(style) || 0), 0);
+      const dominant = activeStyles
+        .map((style) => ({ style, points: entry.totals.get(style) || 0 }))
+        .sort((a, b) => b.points - a.points || a.style.localeCompare(b.style, 'es'))[0];
+      return {
+        ...(mode === 'team' ? { teamName: entry.teamName } : { nombre: entry.nombre, teamName: entry.teamName }),
+        total: Number(cleanPoints(total)),
+        dominantStyle: dominant?.style || 'Sin puntos',
+        dominantPoints: Number(cleanPoints(dominant?.points || 0)),
+        share: total ? Number(cleanPoints(((dominant?.points || 0) / total) * 100)) : 0
+      };
+    }).sort((a, b) => {
+      const labelA = mode === 'team' ? a.teamName : a.nombre;
+      const labelB = mode === 'team' ? b.teamName : b.nombre;
+      return b.share - a.share || b.dominantPoints - a.dominantPoints || labelA.localeCompare(labelB, 'es');
+    });
+
+    return {
+      activeStyles,
+      styleLeaders,
+      profiles,
+      breakdownMap
+    };
+  };
+
+  return {
+    team: buildTypeData('team', teamRows),
+    athlete: buildTypeData('athlete', athleteRows)
+  };
+}
+
+function renderStyleMetrics() {
+  if (!styleDominanceData) return;
+
+  const metricData = styleDominanceData[activeStyleDominanceType];
+  const summary = document.getElementById('styleLeadersSummary');
+  const note = document.getElementById('styleDominanceNote');
+  const leadersList = document.getElementById('styleDominanceList');
+  const profilesList = document.getElementById('teamStyleProfileList');
+  const leadersTitle = document.getElementById('styleDominanceListTitle');
+  const profileTitle = document.getElementById('styleProfileListTitle');
+  const modeCopy = activeStyleDominanceType === 'team'
+    ? {
+        subject: 'equipo',
+        plural: 'equipos',
+        note: `puntaje oficial acumulado por equipo hasta el Evento ${RECORDS.validacion.officialUntilEvent}.`,
+        profile: 'Detalle del lider'
+      }
+    : {
+        subject: 'persona',
+        plural: 'personas',
+        note: `puntaje oficial individual acumulado por participante hasta el Evento ${RECORDS.validacion.officialUntilEvent}. Las postas no suman puntos individuales.`,
+        profile: 'Detalle del lider por estilo'
+      };
+  const selected = metricData.styleLeaders.find((entry) => entry.style === activeStyleDominanceFilter) || metricData.styleLeaders[0];
+
+  if (selected) {
+    activeStyleDominanceFilter = selected.style;
+  }
+
+  summary.innerHTML = metricData.styleLeaders.map((entry) => `
+    <article class="metric-card metric-card-style ${entry.style === activeStyleDominanceFilter ? 'metric-card-active' : ''}" data-style-card="${entry.style}">
+      <span class="metric-label">${entry.style}</span>
+      <strong class="metric-value metric-team">${activeStyleDominanceType === 'team' ? entry.leader.teamName : entry.leader.nombre}</strong>
+      <span class="metric-copy">${cleanPoints(entry.leader.points)} pts${entry.runnerUp ? ` · margen ${cleanPoints(entry.leader.points - entry.runnerUp.points)}` : ''}</span>
+    </article>
+  `).join('');
+
+  summary.querySelectorAll('[data-style-card]').forEach((card) => {
+    card.addEventListener('click', () => {
+      activeStyleDominanceFilter = card.dataset.styleCard;
+      renderStyleMetrics();
+    });
+  });
+
+  note.innerHTML = `
+    <strong>Base del análisis:</strong> ${modeCopy.note}
+    La dominancia se calcula por puntos en cada estilo. Selecciona una cartilla para ver abajo el ranking y el detalle de ese estilo.
+  `;
+
+  if (!selected) {
+    leadersList.innerHTML = `<div class="metrics-note">No hay datos disponibles para este tipo de análisis.</div>`;
+    profilesList.innerHTML = '';
+    return;
+  }
+
+  leadersTitle.textContent = `Ranking en ${selected.style}`;
+  profileTitle.textContent = `${modeCopy.profile} en ${selected.style}`;
+
+  leadersList.innerHTML = selected.ranking.map((item, index) => `
+    <div class="ranking-row metrics-row ${index === 0 ? 'rk-gold' : index === 1 ? 'rk-silver' : index === 2 ? 'rk-bronze' : ''}">
+      <div class="rk-pos">${item.rank || index + 1}</div>
+      <div class="rk-body">
+        <div class="rk-name">${activeStyleDominanceType === 'team' ? item.teamName : item.nombre}</div>
+        <div class="rk-events">${activeStyleDominanceType === 'athlete' ? `${item.teamName} · ` : ''}${cleanPoints(item.points)} pts en ${selected.style}</div>
+      </div>
+      <div class="rk-points">
+        <span class="rk-pts">${cleanPoints(item.points)}</span>
+        <span class="rk-pts-label">pts</span>
+      </div>
+    </div>
+  `).join('');
+
+  const leader = selected.leader;
+  const leaderKey = activeStyleDominanceType === 'team' ? leader.teamName : leader.nombre;
+  const detailBreakdown = [...(metricData.breakdownMap.get(`${leaderKey}|${selected.style}`) || new Map()).entries()]
+    .map(([label, points]) => ({ label, points: Number(cleanPoints(points)) }))
+    .sort((a, b) => b.points - a.points || a.label.localeCompare(b.label, 'es'));
+
+  profilesList.innerHTML = `
+    <div class="metric-style-card">
+      <div class="metric-style-head">
+        <span class="metric-style-name">${activeStyleDominanceType === 'team' ? leader.teamName : leader.nombre}</span>
+        <span class="metric-style-badge">${selected.ranking.length} ${modeCopy.plural} con puntos</span>
+      </div>
+      ${activeStyleDominanceType === 'athlete' ? `<div class="metrics-note metrics-note-inline">${leader.teamName}</div>` : ''}
+      <div class="metrics-grid metrics-grid-compact">
+        <article class="metric-card">
+          <span class="metric-label">Puntos del lider</span>
+          <strong class="metric-value">${cleanPoints(leader.points)}</strong>
+          <span class="metric-copy">${selected.runnerUp ? `Margen ${cleanPoints(leader.points - selected.runnerUp.points)} pts sobre el segundo.` : 'Sin perseguidor directo en este estilo.'}</span>
+        </article>
+        <article class="metric-card">
+          <span class="metric-label">Detalle del estilo</span>
+          <strong class="metric-value">${selected.style}</strong>
+          <span class="metric-copy">${activeStyleDominanceType === 'team' ? 'Desglose por categorías' : 'Desglose por pruebas'} del líder.</span>
+        </article>
+      </div>
+      <div class="metric-style-list">
+        ${detailBreakdown.length ? detailBreakdown.map((item, index) => `
+          <div class="ranking-row metrics-row">
+            <div class="rk-pos">${index + 1}</div>
+            <div class="rk-body">
+              <div class="rk-name">${item.label}</div>
+              <div class="rk-events">${cleanPoints(item.points)} pts dentro de ${selected.style}</div>
+            </div>
+          </div>
+        `).join('') : '<div class="metrics-note">No hay desglose adicional disponible para este líder.</div>'}
+      </div>
+    </div>
+  `;
+}
+
+function buildCategoryDominanceData(rows) {
+  const teamRows = rows.filter((row) => (
+    Number(row.puntosOficiales || row.puntos || 0) > 0
+    && !row.exhibition
+    && !row.dq
+    && !row.ns
+    && !row.nt
+    && row.teamName !== 'Unattached'
+  ));
+  const athleteRows = teamRows.filter((row) => !row.relay);
+  const categories = [...new Set(teamRows.map((row) => row.categoria))]
     .sort((a, b) => getCategoryOrderLabel(a) - getCategoryOrderLabel(b) || a.localeCompare(b, 'es'));
   const scopes = {
     combined: () => true,
     women: (row) => row.genero === 'Damas',
     men: (row) => row.genero === 'Varones'
   };
-  const data = { categories, scopes: {} };
+  const buildRankedEntities = (entityMap, mode) => {
+    const sorted = [...entityMap.values()]
+      .map((item) => ({ ...item, points: Number(cleanPoints(item.points)) }))
+      .sort((a, b) => {
+        const labelA = mode === 'team' ? a.teamName : a.nombre;
+        const labelB = mode === 'team' ? b.teamName : b.nombre;
+        return b.points - a.points || labelA.localeCompare(labelB, 'es');
+      });
 
-  Object.entries(scopes).forEach(([scope, predicate]) => {
-    const categoryPoints = new Map();
-    const categoryStyle = new Map();
+    let lastPoints = null;
+    let lastRank = 0;
+    return sorted.map((item, index) => {
+      const rank = item.points === lastPoints ? lastRank : index + 1;
+      lastPoints = item.points;
+      lastRank = rank;
+      return { rank, ...item };
+    });
+  };
 
-    scoringRows.filter(predicate).forEach((row) => {
-      const category = row.categoria;
-      const teamName = row.teamName;
-      const points = Number(row.puntosOficiales || row.puntos || 0);
-      const style = getMetricStyle(row);
+  const buildTypeData = (mode, sourceRows) => {
+    const typeData = { scopes: {} };
 
-      if (!categoryPoints.has(category)) categoryPoints.set(category, new Map());
-      categoryPoints.get(category).set(teamName, (categoryPoints.get(category).get(teamName) || 0) + points);
+    Object.entries(scopes).forEach(([scope, predicate]) => {
+      const categoryPoints = new Map();
+      const categoryBreakdown = new Map();
 
-      const styleKey = `${category}|${teamName}`;
-      if (!categoryStyle.has(styleKey)) categoryStyle.set(styleKey, new Map());
-      categoryStyle.get(styleKey).set(style, (categoryStyle.get(styleKey).get(style) || 0) + points);
+      sourceRows.filter(predicate).forEach((row) => {
+        const category = row.categoria;
+        const points = Number(row.puntosOficiales || row.puntos || 0);
+        const entityKey = mode === 'team' ? row.teamName : row.nombre;
+        const detailKey = mode === 'team' ? getMetricStyle(row) : row.prueba;
+
+        if (!categoryPoints.has(category)) categoryPoints.set(category, new Map());
+        if (!categoryPoints.get(category).has(entityKey)) {
+          categoryPoints.get(category).set(entityKey, mode === 'team'
+            ? { teamName: row.teamName, points: 0 }
+            : { nombre: row.nombre, teamName: row.teamName, points: 0 });
+        }
+        categoryPoints.get(category).get(entityKey).points += points;
+
+        const breakdownKey = `${category}|${entityKey}`;
+        if (!categoryBreakdown.has(breakdownKey)) categoryBreakdown.set(breakdownKey, new Map());
+        categoryBreakdown.get(breakdownKey).set(detailKey, (categoryBreakdown.get(breakdownKey).get(detailKey) || 0) + points);
+      });
+
+      const leaders = categories.map((category) => {
+        const ranking = buildRankedEntities(categoryPoints.get(category) || new Map(), mode);
+        return {
+          category,
+          ranking,
+          leader: ranking[0] || null,
+          runnerUp: ranking[1] || null,
+          totalPoints: Number(cleanPoints(ranking.reduce((sum, item) => sum + item.points, 0))),
+          entitiesWithPoints: ranking.length
+        };
+      }).filter((entry) => entry.leader);
+
+      typeData.scopes[scope] = {
+        leaders,
+        categoryPoints,
+        categoryBreakdown
+      };
     });
 
-    const leaders = categories.map((category) => {
-      const ranking = buildRankedTable(categoryPoints.get(category) || new Map());
-      return {
-        category,
-        ranking,
-        leader: ranking[0] || null,
-        runnerUp: ranking[1] || null,
-        totalPoints: Number(cleanPoints(ranking.reduce((sum, team) => sum + team.points, 0))),
-        teamsWithPoints: ranking.length
-      };
-    }).filter((entry) => entry.leader);
+    return typeData;
+  };
 
-    data.scopes[scope] = {
-      leaders,
-      categoryPoints,
-      categoryStyle
-    };
-  });
-
-  return data;
+  return {
+    categories,
+    types: {
+      team: buildTypeData('team', teamRows),
+      athlete: buildTypeData('athlete', athleteRows)
+    }
+  };
 }
 
 function renderCategoryDominance() {
@@ -1081,7 +1265,28 @@ function renderCategoryDominance() {
     women: 'mujeres',
     men: 'hombres'
   };
-  const currentScope = categoryDominanceData.scopes[activeCategoryDominanceScope];
+  const entityLabels = {
+    team: {
+      plural: 'equipos',
+      singular: 'lider',
+      metricLabel: 'Equipos con puntos',
+      detailLabel: 'estilos',
+      baseCopy: `puntaje oficial acumulado por equipo hasta el Evento ${RECORDS.validacion.officialUntilEvent}.`,
+      empty: 'No hay datos oficiales disponibles para esta combinación.',
+      detailEmpty: 'No hay desglose adicional disponible para este líder.'
+    },
+    athlete: {
+      plural: 'personas',
+      singular: 'lider',
+      metricLabel: 'Personas con puntos',
+      detailLabel: 'pruebas',
+      baseCopy: `puntaje oficial individual acumulado por participante hasta el Evento ${RECORDS.validacion.officialUntilEvent}. Las postas no suman puntos individuales.`,
+      empty: 'No hay participantes con puntos en esta combinación.',
+      detailEmpty: 'No hay pruebas con puntaje para este participante en esta categoría.'
+    }
+  };
+  const typeConfig = entityLabels[activeCategoryDominanceType];
+  const currentScope = categoryDominanceData.types[activeCategoryDominanceType].scopes[activeCategoryDominanceScope];
   const categories = categoryDominanceData.categories;
 
   if (!activeCategoryDominanceFilter || !categories.includes(activeCategoryDominanceFilter)) {
@@ -1099,7 +1304,7 @@ function renderCategoryDominance() {
   summary.innerHTML = currentScope.leaders.map((entry) => `
     <article class="metric-card metric-card-style ${entry.category === activeCategoryDominanceFilter ? 'metric-card-active' : ''}" data-category-card="${entry.category}">
       <span class="metric-label">${entry.category}</span>
-      <strong class="metric-value metric-team">${entry.leader.teamName}</strong>
+      <strong class="metric-value metric-team">${activeCategoryDominanceType === 'team' ? entry.leader.teamName : entry.leader.nombre}</strong>
       <span class="metric-copy">${cleanPoints(entry.leader.points)} pts${entry.runnerUp ? ` · margen ${cleanPoints(entry.leader.points - entry.runnerUp.points)}` : ''}</span>
     </article>
   `).join('');
@@ -1114,44 +1319,48 @@ function renderCategoryDominance() {
   });
 
   note.innerHTML = `
-    <strong>Base del análisis:</strong> puntaje oficial acumulado por equipo hasta el Evento ${RECORDS.validacion.officialUntilEvent}.
-    Usa el filtro para cambiar la categoría y la rama, y ver qué clubes concentran mejor su puntaje en ese tramo de edades.
+    <strong>Base del análisis:</strong> ${typeConfig.baseCopy}
+    Usa los filtros para cambiar entre equipos o personas, elegir la categoría y la rama, y ver quién dominó mejor ese tramo de edades.
   `;
 
   if (!selected) {
-    list.innerHTML = '<div class="metrics-note">No hay datos oficiales disponibles para esta combinación.</div>';
+    list.innerHTML = `<div class="metrics-note">${typeConfig.empty}</div>`;
     detail.innerHTML = '';
     return;
   }
 
-  listTitle.textContent = `Ranking de equipos en ${selected.category}`;
-  detailTitle.textContent = `Detalle del lider en ${selected.category}`;
+  listTitle.textContent = `Ranking de ${typeConfig.plural} en ${selected.category}`;
+  detailTitle.textContent = `Detalle del ${typeConfig.singular} en ${selected.category}`;
 
-  list.innerHTML = selected.ranking.map((team, index) => `
+  list.innerHTML = selected.ranking.map((entry, index) => `
     <div class="ranking-row metrics-row ${index === 0 ? 'rk-gold' : index === 1 ? 'rk-silver' : index === 2 ? 'rk-bronze' : ''}">
-      <div class="rk-pos">${team.rank}</div>
+      <div class="rk-pos">${entry.rank}</div>
       <div class="rk-body">
-        <div class="rk-name">${team.teamName}</div>
-        <div class="rk-events">${cleanPoints(team.points)} pts · ${selected.totalPoints ? cleanPoints((team.points / selected.totalPoints) * 100) : 0}% del total de la categoría</div>
+        <div class="rk-name">${activeCategoryDominanceType === 'team' ? entry.teamName : entry.nombre}</div>
+        <div class="rk-events">
+          ${activeCategoryDominanceType === 'athlete' ? `${entry.teamName} · ` : ''}${cleanPoints(entry.points)} pts · ${selected.totalPoints ? cleanPoints((entry.points / selected.totalPoints) * 100) : 0}% del total de la categoría
+        </div>
       </div>
       <div class="rk-points">
-        <span class="rk-pts">${cleanPoints(team.points)}</span>
+        <span class="rk-pts">${cleanPoints(entry.points)}</span>
         <span class="rk-pts-label">pts</span>
       </div>
     </div>
   `).join('');
 
-  const leaderStyleMap = currentScope.categoryStyle.get(`${selected.category}|${selected.leader.teamName}`) || new Map();
-  const leaderStyles = [...leaderStyleMap.entries()]
-    .map(([style, points]) => ({ style, points: Number(cleanPoints(points)) }))
-    .sort((a, b) => b.points - a.points || a.style.localeCompare(b.style, 'es'));
+  const leaderKey = activeCategoryDominanceType === 'team' ? selected.leader.teamName : selected.leader.nombre;
+  const leaderBreakdownMap = currentScope.categoryBreakdown.get(`${selected.category}|${leaderKey}`) || new Map();
+  const leaderBreakdown = [...leaderBreakdownMap.entries()]
+    .map(([label, points]) => ({ label, points: Number(cleanPoints(points)) }))
+    .sort((a, b) => b.points - a.points || a.label.localeCompare(b.label, 'es'));
 
   detail.innerHTML = `
     <div class="metric-style-card">
       <div class="metric-style-head">
-        <span class="metric-style-name">${selected.leader.teamName}</span>
+        <span class="metric-style-name">${activeCategoryDominanceType === 'team' ? selected.leader.teamName : selected.leader.nombre}</span>
         <span class="metric-style-badge">${scopeLabels[activeCategoryDominanceScope]}</span>
       </div>
+      ${activeCategoryDominanceType === 'athlete' ? `<div class="metrics-note metrics-note-inline">${selected.leader.teamName}</div>` : ''}
       <div class="metrics-grid metrics-grid-compact">
         <article class="metric-card">
           <span class="metric-label">Puntos del lider</span>
@@ -1159,21 +1368,21 @@ function renderCategoryDominance() {
           <span class="metric-copy">Sobre ${cleanPoints(selected.totalPoints)} pts repartidos en ${selected.category}.</span>
         </article>
         <article class="metric-card">
-          <span class="metric-label">Equipos con puntos</span>
-          <strong class="metric-value">${selected.teamsWithPoints}</strong>
-          <span class="metric-copy">Clubes que puntuaron en esta categoría.</span>
+          <span class="metric-label">${typeConfig.metricLabel}</span>
+          <strong class="metric-value">${selected.entitiesWithPoints}</strong>
+          <span class="metric-copy">${typeConfig.plural.charAt(0).toUpperCase() + typeConfig.plural.slice(1)} que puntuaron en esta categoría.</span>
         </article>
       </div>
       <div class="metric-style-list">
-        ${leaderStyles.length ? leaderStyles.map((item, index) => `
+        ${leaderBreakdown.length ? leaderBreakdown.map((item, index) => `
           <div class="ranking-row metrics-row">
             <div class="rk-pos">${index + 1}</div>
             <div class="rk-body">
-              <div class="rk-name">${item.style}</div>
-              <div class="rk-events">${cleanPoints(item.points)} pts dentro de ${selected.category}</div>
+              <div class="rk-name">${item.label}</div>
+              <div class="rk-events">${cleanPoints(item.points)} pts en ${typeConfig.detailLabel} dentro de ${selected.category}</div>
             </div>
           </div>
-        `).join('') : '<div class="metrics-note">No hay desglose adicional disponible para este líder.</div>'}
+        `).join('') : `<div class="metrics-note">${typeConfig.detailEmpty}</div>`}
       </div>
     </div>
   `;
@@ -1453,6 +1662,7 @@ function initMetricViewSwitch() {
 
 function initCategoryDominanceControls() {
   const select = document.getElementById('categoryDominanceFilter');
+  const typeButtons = document.querySelectorAll('.category-type-btn');
   const buttons = document.querySelectorAll('.category-scope-btn');
 
   if (select) {
@@ -1477,6 +1687,27 @@ function initCategoryDominanceControls() {
       buttons.forEach((node) => node.classList.remove('active'));
       button.classList.add('active');
       renderCategoryDominance();
+    });
+  });
+
+  typeButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+      activeCategoryDominanceType = button.dataset.categoryType;
+      typeButtons.forEach((node) => node.classList.remove('active'));
+      button.classList.add('active');
+      renderCategoryDominance();
+    });
+  });
+}
+
+function initStyleDominanceControls() {
+  const buttons = document.querySelectorAll('.style-type-btn');
+  buttons.forEach((button) => {
+    button.addEventListener('click', () => {
+      activeStyleDominanceType = button.dataset.styleType;
+      buttons.forEach((node) => node.classList.remove('active'));
+      button.classList.add('active');
+      renderStyleMetrics();
     });
   });
 }
@@ -1508,6 +1739,7 @@ function init() {
   initRankingTypeSwitch();
   initMetricsSwitch();
   initMetricViewSwitch();
+  initStyleDominanceControls();
   initCategoryDominanceControls();
   initMedalleroSwitch();
   schedulePromoPopup();
